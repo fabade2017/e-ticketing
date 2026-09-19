@@ -19,18 +19,18 @@ class AiController extends Controller
         $q = $request->q;
         $data = AiInsightsService::generate();
 
-        // Try Groq LLM if key present
+        // Try Groq LLM if key present — world-class Army prompt
         $key = config('ai.key');
         if ($key) {
             try {
-                $prompt = "You are NA E-Ticket AI for Nigerian Army. Stats: ".json_encode($data['stats']).". Insights: ".implode(' | ', $data['insights']).". User question: {$q}.\n\nRespond ORGANISED with: 1) Summary (1 line), 2) Key Stats (bullet list), 3) Action Checklist (numbered, owner & SLA), 4) Risks & Next Steps (bullets). Use clear headings, bullets, concise military tone. Max 180 words.";
-                $res = Http::withToken($key)->timeout(15)->post(config('ai.groq_url'), [
+                $prompt = "You are NA E-Ticket AI — World-Class Army (NATO APP-6, J4 logistics, medical triage) Advisor for Nigerian Army. Stats: ".json_encode($data['stats']).". Readiness: {$data['readiness']}. Insights: ".implode(' | ', $data['insights']).". User question: {$q}.\n\nRespond WORLD-CLASS ORGANISED with: 1) Executive Summary (1-2 lines, readiness GREEN/AMBER/RED), 2) Key Metrics (table-like bullets: total/open/urgent/overdue/avg close/face%), 3) Operational Impact (hotspots, dept load, SLA risk), 4) Action Checklist (numbered, owner: J1/J4/Med/Cmd, SLA, priority), 5) Predictive Forecast & Risks, 6) Recommendation for World-Class Standard (NIST, NATO). Use markdown headings, bold, bullets. Max 280 words, concise, authoritative.";
+                $res = Http::withToken($key)->timeout(20)->post(config('ai.groq_url'), [
                     'model' => config('ai.model', 'groq/compound-mini'),
                     'messages' => [
-                        ['role'=>'system','content'=>'You are a helpful military ticketing assistant. Always respond ORGANISED with headings: Summary, Key Stats, Action Checklist, Risks & Next Steps. Use markdown bullets and bold. Be concise.'],
+                        ['role'=>'system','content'=>'You are a World-Class Army (NATO, JCS, NIST 800-63) ticketing advisor. Always respond ORGANISED with headings: Executive Summary, Key Metrics, Operational Impact, Action Checklist, Forecast & Risks, World-Class Recommendation. Use markdown bullets and bold. Be authoritative and concise.'],
                         ['role'=>'user','content'=>$prompt],
                     ],
-                    'temperature'=>0.3,
+                    'temperature'=>0.35,
                 ]);
                 if ($res->successful()) {
                     $answer = $res->json('choices.0.message.content') ?? $res->json('choices.0.text');

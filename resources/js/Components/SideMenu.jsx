@@ -45,6 +45,7 @@ export default function SideMenu() {
         { label: 'Face Settings', href: '/admin/settings', icon: '◉', show: isSuperAdmin },
         { label: 'Departments', href: '/admin/departments', icon: '🏢', show: isSuperAdmin },
         { label: 'Branding', href: '/admin/branding', icon: '🎨', show: isSuperAdmin },
+        { label: 'Reports', href: '/reports', icon: '📊', show: isPrivileged },
         { label: 'Knowledge Base', href: '/kb', icon: '📚', show: !!user },
         { label: 'Help', href: '/help', icon: '?', show: true },
         { label: 'About', href: '/about', icon: 'ℹ', show: true },

@@ -23,6 +23,8 @@ Route::post('/face/verify', [FaceAuthController::class, 'verify'])->name('face.v
 
 Route::get('/kb', [\App\Http\Controllers\KbController::class, 'index'])->name('kb.index')->middleware('auth');
 Route::post('/kb', [\App\Http\Controllers\KbController::class, 'store'])->name('kb.store')->middleware(['auth','role:SuperAdmin|Admin']);
+Route::get('/reports', [\App\Http\Controllers\ReportController::class, 'index'])->name('reports.index')->middleware(['auth','role:SuperAdmin|Admin|Support']);
+Route::get('/reports/download', [\App\Http\Controllers\ReportController::class, 'download'])->name('reports.download')->middleware(['auth','role:SuperAdmin|Admin|Support']);
 Route::get('/officers', [\App\Http\Controllers\OfficerController::class, 'index'])->name('officers')->middleware(['auth','role:SuperAdmin|Admin|Support']);
 Route::get('/ai/insights', [\App\Http\Controllers\AiController::class, 'insights'])->name('ai.insights')->middleware(['auth','role:SuperAdmin|Admin|Support']);
 Route::post('/ai/ask', [\App\Http\Controllers\AiController::class, 'ask'])->name('ai.ask')->middleware(['auth','role:SuperAdmin|Admin|Support']);
