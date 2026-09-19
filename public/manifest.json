@@ -1,0 +1,9 @@
+{
+  "name": "NA E-Ticket - Nigerian Army",
+  "short_name": "NA E-Ticket",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b3d0b",
+  "theme_color": "#0b3d0b",
+  "icons": []
+}
