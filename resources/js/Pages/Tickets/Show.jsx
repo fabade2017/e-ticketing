@@ -34,8 +34,11 @@ export default function Show({ ticket, departments, roles, histories }) {
                         <div><span className="text-slate-500">Department:</span> {ticket.department?.name || '—'}</div>
                         <div><span className="text-slate-500">Priority:</span> {ticket.priority} {ticket.sla_due_at && <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${new Date(ticket.sla_due_at) < new Date() && !['resolved','closed'].includes(ticket.status) ? 'bg-red-600 text-white' : 'bg-slate-100'}`}>SLA {new Date(ticket.sla_due_at).toLocaleString()} {new Date(ticket.sla_due_at) < new Date() && !['resolved','closed'].includes(ticket.status) ? 'OVERDUE' : ''}</span>}</div>
                         <div><span className="text-slate-500">Status:</span> {ticket.status} {ticket.escalated_at && <span className="text-xs bg-amber-100 px-1 rounded">escalated</span>}</div>
-                        <div><span className="text-slate-500">Assigned:</span> {ticket.assignee ? `${ticket.assignee.rank} ${ticket.assignee.name} (${ticket.assignee.service_number})` : 'Unassigned'}</div>
+                        <div><span className="text-slate-500">Country:</span> {ticket.country || 'Nigeria'}</div>
+                        <div><span className="text-slate-500">State:</span> {ticket.state || '—'}</div>
+                        <div><span className="text-slate-500">LGA:</span> {ticket.lga || '—'}</div>
                         <div><span className="text-slate-500">Location:</span> {ticket.location || '—'}</div>
+                        <div><span className="text-slate-500">Assigned:</span> {ticket.assignee ? `${ticket.assignee.rank} ${ticket.assignee.name} (${ticket.assignee.service_number})` : 'Unassigned'}</div>
                         <div><span className="text-slate-500">Raised by:</span> {ticket.user?.name} ({ticket.user?.service_number})</div>
                         <div><span className="text-slate-500">Unit:</span> {ticket.unit || '—'}</div>
                     </div>

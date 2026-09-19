@@ -42,6 +42,9 @@ class TicketController extends Controller
             'category' => 'required|in:welfare,logistics,medical,equipment,operations,other',
             'priority' => 'required|in:low,medium,high,urgent',
             'location' => 'nullable|string',
+            'country' => 'required|string|in:Nigeria',
+            'state' => 'required|string',
+            'lga' => 'required|string',
             'offline_created' => 'boolean',
         ]);
         $validated['user_id'] = auth()->id();
