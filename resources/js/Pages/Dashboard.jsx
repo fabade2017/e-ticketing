@@ -13,6 +13,12 @@ export default function Dashboard({ stats, ai, recent }) {
     const [q, setQ] = useState('');
     const [answer, setAnswer] = useState(null);
     const [loadingAi, setLoadingAi] = useState(false);
+    const formatAnswer = (txt)=>{
+        if (!txt) return null;
+        // simple markdown: **bold** -> <b>, line breaks preserved via pre-wrap, bullets keep
+        const parts = txt.split(/(\*\*.*?\*\*)/g);
+        return parts.map((p,i)=> p.startsWith('**') && p.endsWith('**') ? <b key={i}>{p.slice(2,-2)}</b> : <span key={i}>{p}</span>);
+    };
 
     const askAi = async () => {
         if (!q.trim()) return;
@@ -136,7 +142,13 @@ export default function Dashboard({ stats, ai, recent }) {
                         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Ask AI: urgent tickets? face coverage?" className="flex-1 bg-white text-black rounded px-3 py-2 text-sm" onKeyDown={e=>e.key==='Enter'&&askAi()} />
                         <button onClick={askAi} disabled={loadingAi} className="bg-yellow-500 text-black px-4 py-2 rounded font-semibold disabled:opacity-50">{loadingAi ? 'Thinking...' : 'Ask AI'}</button>
                     </div>
-                    {answer && <div className="mt-3 bg-white text-slate-800 rounded p-3 text-sm">🤖 {answer}</div>}
+                    {answer && (
+                        <div className="mt-3 bg-white text-slate-800 rounded p-4 text-sm leading-relaxed">
+                            <div className="font-bold text-[#0b3d0b] mb-2">🤖 Organised Response</div>
+                            <div className="whitespace-pre-wrap break-words" style={{whiteSpace:'pre-wrap'}}>{formatAnswer(answer)}</div>
+                            <div className="text-xs text-slate-400 mt-2">Structured: Summary • Key Stats • Action Checklist • Risks</div>
+                        </div>
+                    )}
                 </div>
             )}
 
