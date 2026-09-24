@@ -17,13 +17,19 @@ class AiInsightsService
         $byPriority = Ticket::select('priority', DB::raw('count(*) as c'))->groupBy('priority')->pluck('c','priority')->toArray();
         $byDept = Ticket::select('department_id', DB::raw('count(*) as c'))->groupBy('department_id')->with('department')->get()->map(fn($r)=>['dept'=>$r->department?->name ?? 'Unassigned','count'=>$r->c])->toArray();
         $byUnit = Ticket::select('unit', DB::raw('count(*) as c'))->whereNotNull('unit')->groupBy('unit')->orderByDesc('c')->limit(5)->get()->map(fn($r)=>['unit'=>$r->unit,'count'=>$r->c])->toArray();
-        $trend = Ticket::select(DB::raw("strftime('%Y-%m-%d', created_at) as d"), DB::raw('count(*) as c'))
+        $driver = DB::connection()->getDriverName();
+        $dateExpr = $driver === 'pgsql' ? "to_char(created_at, 'YYYY-MM-DD')" : ($driver === 'mysql' ? "DATE_FORMAT(created_at, '%Y-%m-%d')" : "strftime('%Y-%m-%d', created_at)");
+        $trend = Ticket::select(DB::raw("$dateExpr as d"), DB::raw('count(*) as c'))
             ->groupBy('d')->orderBy('d')->limit(14)->get()->map(fn($r)=>['date'=>$r->d,'count'=>$r->c])->toArray();
 
         $urgentOpen = Ticket::where('priority','urgent')->whereIn('status',['open','in_progress'])->count();
         $overdue = Ticket::where('sla_due_at','<', now())->whereNotIn('status',['resolved','closed'])->count();
         $escalated = Ticket::whereNotNull('escalated_at')->count();
-        $avgCloseHours = Ticket::whereNotNull('closed_at')->selectRaw('avg((julianday(closed_at)-julianday(created_at))*24) as avg')->value('avg');
+        $avgCloseHours = $driver === 'pgsql'
+            ? Ticket::whereNotNull('closed_at')->selectRaw('avg(EXTRACT(EPOCH FROM (closed_at - created_at))/3600) as avg')->value('avg')
+            : ($driver === 'mysql'
+                ? Ticket::whereNotNull('closed_at')->selectRaw('avg(TIMESTAMPDIFF(SECOND, created_at, closed_at)/3600) as avg')->value('avg')
+                : Ticket::whereNotNull('closed_at')->selectRaw('avg((julianday(closed_at)-julianday(created_at))*24) as avg')->value('avg'));
         $faceCoverage = User::count() ? round(User::whereNotNull('face_embedding')->count() / User::count() * 100) : 0;
         $deptCount = Department::count();
         $officerCount = User::count();
