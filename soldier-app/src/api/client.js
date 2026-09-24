@@ -2,8 +2,8 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Backend host - update if Mac IP changes (run ipconfig getifaddr en0)
-export const API_URL = 'http://10.97.186.174:8004/api';
+// Render live backend - works on any network
+export const API_URL = 'https://na-e-ticketing.onrender.com/api';
 
 const client = axios.create({
   baseURL: API_URL,
