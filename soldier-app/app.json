@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "NA E-Ticket (Soldier)",
+    "slug": "na-soldier-app",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b3d0b"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ng.mil.na.eticket.soldier"
+    },
+    "android": {
+      "package": "ng.mil.na.eticket.soldier",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0b3d0b"
+      },
+      "permissions": [
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "usesCleartextTraffic": true,
+      "versionCode": 2
+    },
+    "extra": {
+      "apiUrl": "http://10.97.186.174:8004/api",
+      "eas": {
+        "projectId": "6330e9d7-275f-403f-af24-57e0ff1c6e62"
+      }
+    },
+    "plugins": [],
+    "owner": "adetone007"
+  }
+}

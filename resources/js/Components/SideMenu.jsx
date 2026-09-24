@@ -47,6 +47,8 @@ export default function SideMenu() {
         { label: 'Branding', href: '/admin/branding', icon: '🎨', show: isSuperAdmin },
         { label: 'Reports', href: '/reports', icon: '📊', show: isPrivileged },
         { label: 'Knowledge Base', href: '/kb', icon: '📚', show: !!user },
+        { label: 'Download App', href: '/download', icon: '⬇', show: true },
+        { label: 'Proposal Coverage', href: '/proposal', icon: '✓', show: true },
         { label: 'Help', href: '/help', icon: '?', show: true },
         { label: 'About', href: '/about', icon: 'ℹ', show: true },
         { label: 'Documentation', href: '/docs', icon: '📄', show: true },
@@ -77,7 +79,7 @@ export default function SideMenu() {
                 {items.filter(i=>i.show).map(item => {
                     const isChat = item.href === '/chat';
                     return (
-                    <Link key={item.href} href={item.href} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 text-sm ${collapsed ? 'justify-center' : ''}`}>
+                    <Link key={item.href+item.label} href={item.href} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 text-sm ${collapsed ? 'justify-center' : ''}`}>
                         <span className="w-6 text-center relative">
                             {item.icon}
                             {isChat && unread > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">{unread>9?'9+':unread}</span>}

@@ -16,6 +16,8 @@ Route::get('/', function () {
 Route::get('/help', fn() => Inertia::render('Help'))->name('help');
 Route::get('/about', fn() => Inertia::render('About'))->name('about');
 Route::get('/docs', fn() => Inertia::render('Docs'))->name('docs');
+Route::get('/proposal', fn() => Inertia::render('ProposalCoverage'))->name('proposal');
+Route::get('/download', fn() => Inertia::render('DownloadApp'))->name('download');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
 Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
