@@ -1,14 +1,54 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal, FlatList, StyleSheet } from 'react-native';
 import client, { queueTicket, syncQueue } from '../api/client';
-import NetInfo from '@react-native-async-storage/async-storage'; // fallback check via fetch
+import { NIGERIA_STATES, STATES } from '../data/nigeria';
 
-const CATEGORIES = ['welfare','logistics','medical','equipment','operations','other'];
-const PRIORITIES = ['low','medium','high','urgent'];
+const CATEGORIES = [
+  { label: 'Welfare', value: 'welfare' },
+  { label: 'Logistics', value: 'logistics' },
+  { label: 'Medical', value: 'medical' },
+  { label: 'Equipment', value: 'equipment' },
+  { label: 'Operations', value: 'operations' },
+  { label: 'Other', value: 'other' },
+];
+const PRIORITIES = [
+  { label: 'Low', value: 'low' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'High', value: 'high' },
+  { label: 'Urgent', value: 'urgent' },
+];
+
+function Dropdown({ label, value, placeholder, options, onSelect, disabled }) {
+  const [open, setOpen] = useState(false);
+  const display = options.find(o => o.value === value)?.label || value || placeholder;
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={s.label}>{label}</Text>
+      <TouchableOpacity disabled={disabled} onPress={()=>setOpen(true)} style={[s.input, disabled && { backgroundColor:'#f1f5f9' }, { flexDirection:'row', justifyContent:'space-between', alignItems:'center' }]}>
+        <Text style={{ color: value ? '#0f172a' : '#94a3b8' }}>{display}</Text><Text style={{ color:'#64748b' }}>▼</Text>
+      </TouchableOpacity>
+      <Modal visible={open} transparent animationType="fade">
+        <TouchableOpacity style={s.modalOverlay} onPress={()=>setOpen(false)} activeOpacity={1}>
+          <View style={s.modalBox}>
+            <Text style={s.modalTitle}>{label}</Text>
+            <FlatList data={options} keyExtractor={o=>o.value} style={{ maxHeight: 380 }}
+              renderItem={({item})=>(
+                <TouchableOpacity onPress={()=>{ onSelect(item.value); setOpen(false); }} style={[s.modalItem, value===item.value && { backgroundColor:'#0b3d0b' }]}>
+                  <Text style={[s.modalItemText, value===item.value && { color:'#fff', fontWeight:'800' }]}>{item.label}</Text>
+                </TouchableOpacity>
+              )} />
+            <TouchableOpacity onPress={()=>setOpen(false)} style={s.modalCancel}><Text style={s.modalCancelText}>Cancel</Text></TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+}
 
 export default function CreateTicketScreen({ navigation }) {
   const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', country:'Nigeria', state:'', lga:'', location:'' });
   const [saving, setSaving] = useState(false);
+  const lgaOptions = form.state ? (NIGERIA_STATES[form.state] || []).map(l=>({ label:l, value:l })) : [];
 
   const submit = async () => {
     if (!form.title || !form.description || !form.state || !form.lga) {
@@ -22,9 +62,8 @@ export default function CreateTicketScreen({ navigation }) {
     } catch (e) {
       const isNetwork = !e.response;
       if (isNetwork) {
-        // Military offline: queue locally for border areas
         await queueTicket(form);
-        Alert.alert('Offline queued', 'No signal — ticket saved locally. Will auto-sync when online. Check Tickets screen pull-to-refresh.');
+        Alert.alert('Offline queued', 'No signal — ticket saved locally. Will auto-sync when online.');
         navigation.goBack();
       } else {
         const msg = e.response?.data?.message || JSON.stringify(e.response?.data?.errors) || 'Failed';
@@ -39,42 +78,50 @@ export default function CreateTicketScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={{ padding:16 }}>
-      <Text style={s.h1}>New Ticket</Text>
-      <Text style={s.hint}>For remote/border outposts: auto-queues offline and syncs.</Text>
+    <ScrollView style={s.container} contentContainerStyle={{ padding:16, paddingBottom: 40 }}>
+      <Text style={s.h1}>Create Ticket</Text>
+      <Text style={s.hint}>For remote/border outposts: auto-queues offline and syncs. Fields match web app.</Text>
 
       <Text style={s.label}>Title</Text>
       <TextInput style={s.input} value={form.title} onChangeText={v=>setForm({...form, title:v})} placeholder="e.g. Water pump faulty at OP 1" />
 
-      <Text style={s.label}>Category</Text>
-      <View style={s.row}>{CATEGORIES.map(c=> <TouchableOpacity key={c} onPress={()=>setForm({...form, category:c})} style={[s.pill, form.category===c && s.pillOn]}><Text style={form.category===c ? {color:'#fff'} : {}}>{c}</Text></TouchableOpacity>)}</View>
+      <View style={{ flexDirection:'row', gap:10 }}>
+        <Dropdown label="Category" value={form.category} placeholder="Select Category" options={CATEGORIES} onSelect={v=>setForm({...form, category:v})} />
+        <Dropdown label="Priority" value={form.priority} placeholder="Select Priority" options={PRIORITIES} onSelect={v=>setForm({...form, priority:v})} />
+      </View>
 
-      <Text style={s.label}>Priority (SLA: urgent 4h / high 12h / medium 24h / low 72h)</Text>
-      <View style={s.row}>{PRIORITIES.map(p=> <TouchableOpacity key={p} onPress={()=>setForm({...form, priority:p})} style={[s.pill, form.priority===p && s.pillOn]}><Text style={form.priority===p ? {color:'#fff'} : {}}>{p}</Text></TouchableOpacity>)}</View>
+      <View style={{ flexDirection:'row', gap:10 }}>
+        <Dropdown label="Country" value={form.country} placeholder="Nigeria" options={[{ label:'Nigeria', value:'Nigeria' }]} onSelect={v=>setForm({...form, country:v})} />
+        <Dropdown label="State" value={form.state} placeholder="Select State" options={STATES.map(s=>({ label:s, value:s }))} onSelect={v=>setForm({...form, state:v, lga:''})} />
+      </View>
+      <Dropdown label="LGA" value={form.lga} placeholder={form.state ? 'Select LGA' : 'Pick state first'} options={lgaOptions} onSelect={v=>setForm({...form, lga:v})} disabled={!form.state} />
 
-      <Text style={s.label}>State</Text>
-      <TextInput style={s.input} value={form.state} onChangeText={v=>setForm({...form, state:v})} placeholder="e.g. Borno" />
-      <Text style={s.label}>LGA</Text>
-      <TextInput style={s.input} value={form.lga} onChangeText={v=>setForm({...form, lga:v})} placeholder="e.g. Maiduguri" />
       <Text style={s.label}>Location / Outpost detail</Text>
-      <TextInput style={s.input} value={form.location} onChangeText={v=>setForm({...form, location:v})} placeholder="Sector 2, precise OP" />
+      <TextInput style={s.input} value={form.location} onChangeText={v=>setForm({...form, location:v})} placeholder="e.g. Sector 2, Borno — detailed post" />
+
       <Text style={s.label}>Description</Text>
       <TextInput style={[s.input, { height:120, textAlignVertical:'top' }]} value={form.description} onChangeText={v=>setForm({...form, description:v})} multiline placeholder="Describe issue..." />
 
       <TouchableOpacity style={s.btn} onPress={submit} disabled={saving}><Text style={s.btnTxt}>{saving?'Submitting...':'Submit Ticket'}</Text></TouchableOpacity>
       <TouchableOpacity style={[s.btn, { backgroundColor:'#334155', marginTop:8 }]} onPress={sync}><Text style={s.btnTxt}>Sync Offline Queue</Text></TouchableOpacity>
+      <Text style={s.note}>State/LGA dropdowns are identical to web at resources/js/Pages/Tickets/Create.jsx:37 • Country locked to Nigeria</Text>
     </ScrollView>
   );
 }
 const s = StyleSheet.create({
   container:{ flex:1, backgroundColor:'#f8fafc' },
   h1:{ fontSize:22, fontWeight:'800', color:'#0b3d0b' },
-  hint:{ fontSize:11, color:'#64748b', marginBottom:12 },
-  label:{ fontSize:12, fontWeight:'700', marginTop:12, marginBottom:6, color:'#334155' },
+  hint:{ fontSize:11, color:'#64748b', marginBottom:4 },
+  label:{ fontSize:11, fontWeight:'700', marginTop:12, marginBottom:6, color:'#334155' },
   input:{ backgroundColor:'#fff', borderWidth:1, borderColor:'#cbd5e1', borderRadius:10, padding:12 },
-  row:{ flexDirection:'row', flexWrap:'wrap', gap:8 },
-  pill:{ borderWidth:1, borderColor:'#cbd5e1', borderRadius:20, paddingHorizontal:12, paddingVertical:8, backgroundColor:'#fff' },
-  pillOn:{ backgroundColor:'#0b3d0b', borderColor:'#0b3d0b' },
   btn:{ backgroundColor:'#0b3d0b', borderRadius:12, padding:14, alignItems:'center', marginTop:16 },
-  btnTxt:{ color:'#fff', fontWeight:'800' }
+  btnTxt:{ color:'#fff', fontWeight:'800' },
+  note:{ fontSize:10, color:'#94a3b8', marginTop:8, textAlign:'center' },
+  modalOverlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'center', padding:20 },
+  modalBox:{ backgroundColor:'#fff', borderRadius:16, padding:16, maxHeight: 520 },
+  modalTitle:{ fontWeight:'800', fontSize:16, marginBottom:10, color:'#0b3d0b' },
+  modalItem:{ padding:12, borderRadius:8, marginBottom:4, borderWidth:1, borderColor:'#f1f5f9' },
+  modalItemText:{ fontSize:14 },
+  modalCancel:{ marginTop:8, borderWidth:1, borderColor:'#cbd5e1', borderRadius:10, padding:12, alignItems:'center' },
+  modalCancelText:{ fontWeight:'700', color:'#475569' }
 });
