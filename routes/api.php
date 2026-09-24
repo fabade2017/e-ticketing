@@ -14,6 +14,19 @@ use Illuminate\Support\Facades\Route;
 | All /api/* routes are stateless (no CSRF, no session cookies needed)
 */
 
+// Public - branding for mobile header (same as web)
+Route::get('/branding', function () {
+    $name = \App\Models\SystemSetting::getValue('app_name', config('branding.app_name', 'NA E-Ticket'));
+    $motto = \App\Models\SystemSetting::getValue('app_motto', config('branding.app_motto', 'Secure • Offline-Capable'));
+    $logo = \App\Models\SystemSetting::getValue('app_logo', null);
+    return response()->json([
+        'app_name' => $name,
+        'app_motto' => $motto,
+        'app_logo' => $logo ? url('storage/'.$logo) : null,
+        'app_logo_path' => $logo,
+    ]);
+})->name('api.branding');
+
 // Public - soldier login
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 Route::post('/face/verify', [AuthController::class, 'faceVerify'])->name('api.face.verify');

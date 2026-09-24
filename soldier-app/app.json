@@ -2,7 +2,7 @@
   "expo": {
     "name": "NA E-Ticket (Soldier)",
     "slug": "na-soldier-app",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -32,7 +32,7 @@
         "ACCESS_NETWORK_STATE"
       ],
       "usesCleartextTraffic": true,
-      "versionCode": 3
+      "versionCode": 4
     },
     "extra": {
       "apiUrl": "https://na-e-ticketing.onrender.com/api",
