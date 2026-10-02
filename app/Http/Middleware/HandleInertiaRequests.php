@@ -56,11 +56,28 @@ class HandleInertiaRequests extends Middleware
                 'face_auth_mode' => \App\Models\SystemSetting::getValue('face_auth_mode', 'local'),
                 'face_auth_enabled' => \App\Models\SystemSetting::getValue('face_auth_enabled', '1') === '1',
             ],
-            'branding' => [
-                'app_name' => \App\Models\SystemSetting::getValue('app_name', config('app.name', 'NA E-Ticket')),
-                'app_motto' => \App\Models\SystemSetting::getValue('app_motto', 'Secure • Offline-Capable • Nigerian Army'),
-                'app_logo' => \App\Models\SystemSetting::getValue('app_logo', null),
-            ],
+            'branding' => (function () {
+                $logoPath = \App\Models\SystemSetting::getValue('app_logo', null);
+                $logoUrl = null;
+                if ($logoPath) {
+                    try {
+                        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($logoPath)) {
+                            $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($logoPath);
+                        } else {
+                            // file missing (e.g. after deploy wipe) — treat as no logo
+                            $logoPath = null;
+                        }
+                    } catch (\Throwable $e) {
+                        $logoPath = null;
+                    }
+                }
+                return [
+                    'app_name' => \App\Models\SystemSetting::getValue('app_name', config('app.name', 'NA E-Ticket')),
+                    'app_motto' => \App\Models\SystemSetting::getValue('app_motto', 'Secure • Offline-Capable • Nigerian Army'),
+                    'app_logo' => $logoPath,
+                    'logo_url' => $logoUrl, // full URL for <img> and favicon; null if none
+                ];
+            })(),
         ];
     }
 }

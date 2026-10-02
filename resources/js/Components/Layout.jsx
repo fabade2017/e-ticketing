@@ -10,7 +10,8 @@ export default function Layout({ children }) {
     const isSuperAdmin = roles.includes('SuperAdmin');
     const appName = branding?.app_name || 'NA E-Ticket';
     const appMotto = branding?.app_motto || 'Secure • Offline-Capable';
-    const appLogo = branding?.app_logo ? `/storage/${branding.app_logo}` : null;
+    // Prefer full logo_url from backend (handles APP_URL + exists check), fallback to /storage path
+    const appLogo = branding?.logo_url || (branding?.app_logo ? `/storage/${branding.app_logo}` : null);
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -18,7 +19,7 @@ export default function Layout({ children }) {
             <GlobalLoader />
             <nav className="bg-[#0b3d0b] text-white px-6 py-3 flex justify-between items-center shadow sticky top-0 z-50">
                 <Link href="/" className="font-bold tracking-wide flex items-center gap-3">
-                    {appLogo ? <img src={appLogo} alt="logo" className="w-9 h-9 rounded bg-white object-contain p-1" /> : <span className="bg-white text-[#0b3d0b] px-2 py-1 rounded text-sm">NA</span>}
+                    {appLogo ? <img src={appLogo} alt="logo" className="w-9 h-9 rounded bg-white object-contain p-1" onError={e=>e.target.style.display='none'} /> : <span className="bg-white text-[#0b3d0b] px-2 py-1 rounded text-sm">NA</span>}
                     <div className="leading-tight">
                         <div className="font-bold">{appName}</div>
                         <div className="text-[11px] opacity-70 font-normal">{appMotto}</div>

@@ -13,7 +13,7 @@ export default function SideMenu() {
     const [collapsed, setCollapsed] = useState(false);
 
     const { branding } = usePage().props;
-    const appLogo = branding?.app_logo ? `/storage/${branding.app_logo}` : null;
+    const appLogo = branding?.logo_url || (branding?.app_logo ? `/storage/${branding.app_logo}` : null);
     const appName = branding?.app_name || 'NA E-Ticket';
     const isSoldier = roles.includes('Soldier');
     const isSupport = roles.includes('Support');
@@ -69,7 +69,7 @@ export default function SideMenu() {
                 </div>
                 {!collapsed && (
                     <div className="flex items-center gap-2 bg-white/5 rounded p-2">
-                        {appLogo ? <img src={appLogo} alt="logo" className="w-8 h-8 bg-white rounded object-contain p-1" /> : <span className="bg-white text-[#0b3d0b] w-8 h-8 flex items-center justify-center rounded text-xs font-bold">NA</span>}
+                        {appLogo ? <img src={appLogo} alt="logo" className="w-8 h-8 bg-white rounded object-contain p-1" onError={e=>e.target.style.display='none'} /> : <span className="bg-white text-[#0b3d0b] w-8 h-8 flex items-center justify-center rounded text-xs font-bold">NA</span>}
                         <div className="text-xs leading-tight">
                             <div className="font-bold">{appName}</div>
                             <div className="opacity-60 text-[11px] truncate w-32">{usePage().props.branding?.app_motto}</div>

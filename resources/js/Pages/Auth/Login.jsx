@@ -4,7 +4,10 @@ import Layout from '../../Components/Layout';
 import FaceAuth from '../../Components/FaceAuth';
 
 export default function Login() {
-    const { systemSettings } = usePage().props;
+    const { systemSettings, branding } = usePage().props;
+    const appName = branding?.app_name || 'NA E-Ticket';
+    const appMotto = branding?.app_motto || 'Secure • Offline-Capable • Nigerian Army';
+    const appLogo = branding?.logo_url || (branding?.app_logo ? `/storage/${branding.app_logo}` : null);
     const mode = systemSettings?.face_auth_mode || 'local';
     const faceEnabled = systemSettings?.face_auth_enabled ?? true;
     const [faceMessage, setFaceMessage] = useState('');
@@ -29,6 +32,11 @@ export default function Login() {
 
     return (
         <Layout>
+            <div className="flex flex-col items-center mt-2 mb-2">
+                {appLogo ? <img src={appLogo} alt={appName} className="w-20 h-20 object-contain bg-white rounded-xl p-2 border shadow-sm" onError={e=>e.target.style.display='none'} /> : <span className="bg-[#0b3d0b] text-white w-20 h-20 flex items-center justify-center rounded-xl text-2xl font-bold border shadow-sm">NA</span>}
+                <h1 className="text-2xl font-extrabold text-slate-900 mt-3">{appName}</h1>
+                <p className="text-xs text-slate-500 tracking-wide">{appMotto}</p>
+            </div>
             <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8 mt-6">
                 <div className="bg-white p-8 rounded-xl border shadow">
                     <h2 className="text-2xl font-bold">Personnel Login</h2>

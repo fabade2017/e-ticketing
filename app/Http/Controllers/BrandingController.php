@@ -12,12 +12,20 @@ class BrandingController extends Controller
     public function index()
     {
         if (!auth()->user()->hasRole('SuperAdmin')) abort(403);
+        $logoPath = SystemSetting::getValue('app_logo', null);
+        $logoUrl = null;
+        if ($logoPath) {
+            try {
+                $logoUrl = Storage::disk('public')->exists($logoPath) ? Storage::disk('public')->url($logoPath) : null;
+                if (!$logoUrl) $logoPath = null; // file missing (deploy wipe) — fallback to none
+            } catch (\Throwable $e) { $logoPath = null; }
+        }
         return Inertia::render('Admin/Branding', [
             'branding' => [
                 'app_name' => SystemSetting::getValue('app_name', 'NA E-Ticket'),
                 'app_motto' => SystemSetting::getValue('app_motto', 'Secure • Offline-Capable • Nigerian Army'),
-                'app_logo' => SystemSetting::getValue('app_logo', null),
-                'logo_url' => SystemSetting::getValue('app_logo') ? Storage::disk('public')->url(SystemSetting::getValue('app_logo')) : null,
+                'app_logo' => $logoPath,
+                'logo_url' => $logoUrl,
             ],
         ]);
     }
@@ -42,10 +50,15 @@ class BrandingController extends Controller
         } elseif ($request->hasFile('logo')) {
             $old = SystemSetting::getValue('app_logo');
             if ($old) Storage::disk('public')->delete($old);
+            // ensure branding dir exists and storage link is present
+            try { Storage::disk('public')->makeDirectory('branding'); } catch (\Throwable $e) {}
             $path = $request->file('logo')->store('branding', 'public');
             SystemSetting::setValue('app_logo', $path);
         }
 
-        return back()->with('success', 'Branding updated — logo, name and motto will reflect instantly.');
+        // ensure storage symlink exists (Render/Docker ephemeral)
+        try { if (!is_link(public_path('storage')) && !is_dir(public_path('storage'))) \Illuminate\Support\Facades\Artisan::call('storage:link'); } catch (\Throwable $e) {}
+
+        return redirect()->route('admin.branding')->with('success', 'Branding updated — logo, name and motto will reflect instantly. If logo 404 after deploy, re-upload (Render local disk is ephemeral — consider S3 for persistence).');
     }
 }

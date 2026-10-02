@@ -5,11 +5,11 @@ export default function Welcome() {
     const { auth, branding } = usePage().props;
     const appName = branding?.app_name || 'Nigerian Army E-Ticketing Platform';
     const appMotto = branding?.app_motto || 'Secure • RBAC • Face ID Dual-Mode • Offline PWA';
-    const appLogo = branding?.app_logo ? `/storage/${branding.app_logo}` : null;
+    const appLogo = branding?.logo_url || (branding?.app_logo ? `/storage/${branding.app_logo}` : null);
     return (
         <Layout>
             <div className="py-12 text-center">
-                {appLogo && <img src={appLogo} alt="logo" className="w-20 h-20 mx-auto object-contain bg-white rounded-xl p-2 border shadow-sm" />}
+                {appLogo ? <img src={appLogo} alt="logo" className="w-20 h-20 mx-auto object-contain bg-white rounded-xl p-2 border shadow-sm" onError={e=>e.target.style.display='none'} /> : <div className="w-20 h-20 mx-auto flex items-center justify-center bg-[#0b3d0b] text-white rounded-xl text-2xl font-bold">NA</div>}
                 <div className="inline-flex items-center gap-2 bg-green-50 text-green-800 px-3 py-1 rounded-full text-xs border border-green-200 mt-4">● {appMotto}</div>
                 <h1 className="text-4xl font-bold mt-6 text-slate-900">{appName}</h1>
                 <p className="text-slate-600 mt-4 max-w-2xl mx-auto">Streamlined ticketing for personnel in barracks, field and border deployments. Works offline, syncs when connected. Face identification with SuperAdmin-toggleable Local / Cloud mode.</p>

@@ -6,6 +6,15 @@
     <meta name="theme-color" content="#0b3d0b">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title inertia>{{ \App\Models\SystemSetting::getValue('app_name', config('app.name', 'NA E-Ticket')) }}</title>
+    @php
+        $__logoPath = \App\Models\SystemSetting::getValue('app_logo');
+        $__logoUrl = null;
+        try { if ($__logoPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($__logoPath)) $__logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($__logoPath); } catch (\Throwable $e) {}
+    @endphp
+    @if($__logoUrl)
+        <link rel="icon" type="image/webp" href="{{ $__logoUrl }}">
+        <link rel="apple-touch-icon" href="{{ $__logoUrl }}">
+    @endif
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600&family=jetbrains-mono:400" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])

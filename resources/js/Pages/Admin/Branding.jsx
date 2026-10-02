@@ -1,5 +1,5 @@
 import { useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../Components/Layout';
 
 export default function Branding({ branding }) {
@@ -11,14 +11,26 @@ export default function Branding({ branding }) {
         remove_logo: false,
     });
     const [preview, setPreview] = useState(branding.logo_url || null);
+    // keep preview in sync when server returns new logo_url after save
+    useEffect(() => { if (!data.logo) setPreview(branding.logo_url || null); }, [branding.logo_url]);
 
     const onFile = e => {
         const f = e.target.files[0];
         setData('logo', f);
         if (f) setPreview(URL.createObjectURL(f));
+        else setPreview(branding.logo_url || null);
     };
 
-    const submit = e => { e.preventDefault(); post('/admin/branding', { forceFormData: true }); };
+    const submit = e => {
+        e.preventDefault();
+        post('/admin/branding', {
+            forceFormData: true,
+            onSuccess: () => {
+                // preview will sync via useEffect on next props
+                setData('logo', null);
+            },
+        });
+    };
 
     return (
         <Layout>
@@ -53,7 +65,7 @@ export default function Branding({ branding }) {
                 <div className="bg-white border rounded-xl p-6">
                     <h3 className="font-semibold">Live Preview — Header</h3>
                     <div className="bg-[#0b3d0b] text-white px-4 py-3 flex items-center gap-3 rounded mt-3">
-                        {preview ? <img src={preview} alt="logo" className="w-10 h-10 rounded bg-white object-contain p-1" /> : <span className="bg-white text-[#0b3d0b] px-2 py-1 rounded text-sm">NA</span>}
+                        {preview ? <img src={preview} alt="logo" className="w-10 h-10 rounded bg-white object-contain p-1" onError={e=>e.target.style.display='none'} /> : <span className="bg-white text-[#0b3d0b] px-2 py-1 rounded text-sm">NA</span>}
                         <div>
                             <div className="font-bold leading-none">{data.app_name || 'NA E-Ticket'}</div>
                             <div className="text-[11px] opacity-70">{data.app_motto}</div>
@@ -64,7 +76,8 @@ export default function Branding({ branding }) {
                         <div><b>Name:</b> {branding.app_name}</div>
                         <div><b>Motto:</b> {branding.app_motto}</div>
                         <div><b>Logo:</b> {branding.app_logo || '— none (using NA badge)'} </div>
-                        {branding.logo_url && <img src={branding.logo_url} alt="current logo" className="w-24 h-24 border rounded object-contain mt-2 bg-white p-2" />}
+                        {branding.logo_url ? <img src={branding.logo_url + (branding.logo_url.includes('?')?'&':'?') + 'v=' + Date.now()} alt="current logo" className="w-24 h-24 border rounded object-contain mt-2 bg-white p-2" onError={e=>{e.target.style.display='none'; e.target.nextSibling && (e.target.nextSibling.style.display='block');}} /> : <span className="text-xs text-slate-400">No logo uploaded yet — upload above.</span>}
+                        {branding.logo_url && <div style={{display:'none'}} className="text-xs text-amber-600 mt-1">Image failed to load — check storage link or re-upload (Render disk is ephemeral).</div>}
                     </div>
                 </div>
             </div>
