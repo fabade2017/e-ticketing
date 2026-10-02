@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
 
   const fetchMe = async () => {
     try {
-      const { data } = await client.get('/user');
+      const { data } = await client.get('/user', { __silent: true });
       setUser(data);
       return data;
     } catch {

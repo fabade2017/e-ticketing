@@ -9,11 +9,11 @@ export default function DashboardScreen() {
   const [stats, setStats] = useState(null);
   const [queueLen, setQueueLen] = useState(0);
 
-  const load = async () => {
-    try { const {data}= await client.get('/tickets/stats'); setStats(data); } catch {}
+  const load = async (silent=false) => {
+    try { const {data}= await client.get('/tickets/stats', { __silent: silent }); setStats(data); } catch {}
     setQueueLen((await getQueue()).length);
   };
-  useEffect(()=>{ load(); const id=setInterval(load,10000); return()=>clearInterval(id); },[]);
+  useEffect(()=>{ load(false); const id=setInterval(()=>load(true),10000); return()=>clearInterval(id); },[]);
 
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding:16, paddingTop:48 }}>
@@ -30,7 +30,7 @@ export default function DashboardScreen() {
       <View style={s.info}>
         <Text style={s.infoTitle}>Field Ops Notice</Text>
         <Text style={s.infoTxt}>• Tickets offline-queue when no signal (border areas). Pull to sync.{"\n"}• SLA: urgent 4h • high 12h • medium 24h • low 72h.{"\n"}• Offline queue: {queueLen} pending • Tap Sync to retry</Text>
-        <TouchableOpacity onPress={async()=>{ const r=await syncQueue(); alert(`Synced ${r.synced}, remaining ${r.remaining}`); load(); }} style={s.syncBtn}><Text style={s.syncTxt}>Sync Offline Queue ({queueLen})</Text></TouchableOpacity>
+        <TouchableOpacity onPress={async()=>{ const r=await syncQueue(); alert(`Synced ${r.synced}, remaining ${r.remaining}`); load(false); }} style={s.syncBtn}><Text style={s.syncTxt}>Sync Offline Queue ({queueLen})</Text></TouchableOpacity>
       </View>
 
       <TouchableOpacity onPress={logout} style={s.logout}><Text style={s.logoutTxt}>Logout</Text></TouchableOpacity>

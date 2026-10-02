@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import SideMenu from './SideMenu';
 import ErrorBoundary from './ErrorBoundary';
+import GlobalLoader from './GlobalLoader';
 
 export default function Layout({ children }) {
     const { auth, systemSettings, branding } = usePage().props;
@@ -14,6 +15,7 @@ export default function Layout({ children }) {
     return (
         <div className="min-h-screen flex flex-col">
             <Head title={appName} />
+            <GlobalLoader />
             <nav className="bg-[#0b3d0b] text-white px-6 py-3 flex justify-between items-center shadow sticky top-0 z-50">
                 <Link href="/" className="font-bold tracking-wide flex items-center gap-3">
                     {appLogo ? <img src={appLogo} alt="logo" className="w-9 h-9 rounded bg-white object-contain p-1" /> : <span className="bg-white text-[#0b3d0b] px-2 py-1 rounded text-sm">NA</span>}

@@ -33,11 +33,22 @@ export async function clearToken() {
   await AsyncStorage.removeItem('na_token');
 }
 
+let showLoader = null;
+let hideLoader = null;
+export function bindLoading(show, hide) { showLoader = show; hideLoader = hide; }
+
 client.interceptors.request.use(async (config) => {
   const token = await getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // show rolling blocker for every network op (auto-hides on response)
+  if (!config.__silent && showLoader) showLoader(config.__loadingMsg || 'Processing, please wait...');
   return config;
 });
+
+client.interceptors.response.use(
+  (res) => { if (!res.config.__silent && hideLoader) hideLoader(); return res; },
+  (err) => { if (!err.config?.__silent && hideLoader) hideLoader(); return Promise.reject(err); }
+);
 
 // Offline queue helpers - for border areas with no signal
 const QUEUE_KEY = 'na_offline_tickets';
@@ -60,7 +71,7 @@ export async function syncQueue() {
   const remaining = [];
   for (const t of q) {
     try {
-      await client.post('/tickets', t);
+      await client.post('/tickets', t, { __silent: true });
       synced++;
     } catch (e) {
       // keep 4xx validation errors for manual fix, retry only network errors
