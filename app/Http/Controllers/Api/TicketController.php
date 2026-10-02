@@ -18,8 +18,11 @@ class TicketController extends Controller
         $query = Ticket::with(['user:id,name,rank,service_number', 'assignee:id,name,rank', 'department:id,name'])
             ->latest();
 
-        if (!$user->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) {
-            $query->where('user_id', $user->id);
+        $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
+        if (!$isAll) {
+            $query->visibleTo($user);
+        } else {
+            // scope=all explicit, still allow additional unit/department filter as intersection
         }
 
         if ($request->scope === 'unit' && $user->unit) {
@@ -150,9 +153,9 @@ class TicketController extends Controller
     {
         $user = $request->user();
         $query = Ticket::query();
-
-        if (!$user->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) {
-            $query->where('user_id', $user->id);
+        $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
+        if (!$isAll) {
+            $query->visibleTo($user);
         }
 
         return response()->json([
@@ -168,8 +171,10 @@ class TicketController extends Controller
 
     private function authorizeAccess($user, Ticket $ticket): void
     {
-        if ($user->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) {
-            return;
+        if ($user->hasRole('SuperAdmin')) return;
+        if ($user->hasAnyRole(['Admin','Support'])) {
+            if (Ticket::where('id',$ticket->id)->visibleTo($user)->exists()) return;
+            abort(403, 'Ticket not in your scope');
         }
         if ($ticket->user_id !== $user->id) {
             abort(403, 'You can only view your own tickets');

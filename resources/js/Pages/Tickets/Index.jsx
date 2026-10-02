@@ -2,13 +2,20 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
 
-export default function Index({ tickets, filters }) {
+export default function Index({ tickets, filters, scope, canSeeAll, isAll }) {
     const safeTickets = tickets || { data: [] };
     const safeFilters = Array.isArray(filters) ? {} : (filters || {});
     const [search, setSearch] = useState(safeFilters.search || '');
     const [status, setStatus] = useState(safeFilters.status || '');
     const [filter, setFilter] = useState(safeFilters.filter || '');
-    const apply = () => router.get('/tickets', { search, status, filter }, { preserveState: true });
+    const apply = () => {
+        const params = { search, status, filter };
+        if (safeFilters.scope) params.scope = safeFilters.scope;
+        if (safeFilters.view) params.view = safeFilters.view;
+        // preserve scope toggle
+        if (isAll) params.scope = 'all';
+        router.get('/tickets', params, { preserveState: true });
+    };
 
     const slaBadge = (t)=>{
         try {
@@ -26,7 +33,17 @@ export default function Index({ tickets, filters }) {
     return (
         <Layout>
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Tickets</h1>
+                <div>
+                    <h1 className="text-2xl font-bold">Tickets {scope ? <span className="text-sm font-normal text-slate-500">— {isAll ? 'All' : scope}</span> : ''}</h1>
+                    <p className="text-xs mt-1">
+                        <span className={`px-2 py-1 rounded-full border ${isAll ? 'bg-slate-800 text-white border-slate-800' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>{isAll ? 'Viewing ALL tickets (privileged)' : `Scoped to ${scope || 'you'} — only your dept/unit/assigned`}</span>
+                        {canSeeAll && (
+                            isAll
+                                ? <Link href="/tickets" className="ml-2 underline text-[#0b3d0b]">Switch to My Scope</Link>
+                                : <Link href="/tickets?scope=all" className="ml-2 underline text-[#0b3d0b]">View All</Link>
+                        )}
+                    </p>
+                </div>
                 <Link href="/tickets/create" className="bg-[#0b3d0b] text-white px-4 py-2 rounded">New Ticket</Link>
             </div>
             <div className="flex gap-2 mt-4 flex-wrap">

@@ -12,20 +12,44 @@ class TicketController extends Controller
     {
         $user = auth()->user();
         $query = Ticket::with(['user', 'assignee','department'])->latest();
-        // RBAC: Soldier sees own only, Admin/Support/SuperAdmin see all (unit/department badge shows scope but not filtered — use ?unit= to filter)
-        if (!$user->hasAnyRole(['SuperAdmin','Admin','Support'])) {
-            $query->where('user_id', $user->id);
+
+        // RBAC: default is per-user scoped. ?scope=all allows privileged to see everything.
+        $scopeParam = $request->input('scope');
+        $isAll = $scopeParam === 'all' && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
+        if (!$isAll) {
+            $query->visibleTo($user);
         }
-        // optional scope filter ?scope=unit or ?scope=department
+        // legacy explicit filters still apply (intersect with visible scope)
         if ($request->scope === 'unit' && $user->unit) $query->where('unit', $user->unit);
         if ($request->scope === 'department' && $user->department_id) $query->where('department_id', $user->department_id);
+        // additional filter param ?view=unit|department|mine for toggle UI
+        if ($request->input('view') === 'mine') {
+            $query = Ticket::with(['user','assignee','department'])->where('user_id',$user->id)->latest();
+            if ($request->status) $query->where('status', $request->status);
+            if ($request->search) $query->where(fn($q) => $q->where('title', 'like', "%{$request->search}%")->orWhere('ticket_number', 'like', "%{$request->search}%"));
+            if ($request->filter === 'overdue') $query->where('sla_due_at','<', now())->whereNotIn('status',['resolved','closed']);
+            return Inertia::render('Tickets/Index', [
+                'tickets' => $query->paginate(15)->withQueryString(),
+                'filters' => $request->only(['status', 'search','filter','scope','view']),
+                'scope' => 'mine',
+                'canSeeAll' => $user->hasAnyRole(['SuperAdmin','Admin','Support']),
+                'isAll' => false,
+            ]);
+        }
         if ($request->status) $query->where('status', $request->status);
         if ($request->search) $query->where(fn($q) => $q->where('title', 'like', "%{$request->search}%")->orWhere('ticket_number', 'like', "%{$request->search}%"));
         if ($request->filter === 'overdue') $query->where('sla_due_at','<', now())->whereNotIn('status',['resolved','closed']);
 
+        $scopeLabel = $isAll ? 'all' : ($user->hasRole('SuperAdmin') ? 'all' : ($user->department_id ? 'department' : ($user->unit ? 'unit' : 'personal')));
+        if (!$isAll && $user->hasAnyRole(['Admin','Support']) && !$user->department_id && !$user->unit) $scopeLabel = 'personal';
+        if (!$user->hasAnyRole(['SuperAdmin','Admin','Support'])) $scopeLabel = 'personal';
+
         return Inertia::render('Tickets/Index', [
             'tickets' => $query->paginate(15)->withQueryString(),
-            'filters' => $request->only(['status', 'search','filter']),
+            'filters' => $request->only(['status', 'search','filter','scope','view']),
+            'scope' => $scopeLabel,
+            'canSeeAll' => $user->hasAnyRole(['SuperAdmin','Admin','Support']),
+            'isAll' => $isAll,
         ]);
     }
 
@@ -90,7 +114,14 @@ class TicketController extends Controller
 
     private function authorizeAccess(Ticket $ticket): void
     {
-        if (auth()->user()->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) return;
-        if ($ticket->user_id !== auth()->id()) abort(403);
+        $user = auth()->user();
+        if ($user->hasRole('SuperAdmin')) return;
+        // Admin/Support can access if ticket is visible to them (department/unit/assigned/own)
+        if ($user->hasAnyRole(['Admin','Support'])) {
+            $visible = \App\Models\Ticket::where('id',$ticket->id)->visibleTo($user)->exists();
+            if ($visible) return;
+            abort(403, 'Ticket not in your department/unit/assigned scope');
+        }
+        if ($ticket->user_id !== $user->id) abort(403);
     }
 }

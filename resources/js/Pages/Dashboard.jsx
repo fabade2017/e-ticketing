@@ -5,11 +5,13 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 
 const COLORS = ['#0b3d0b','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
 
-export default function Dashboard({ stats, ai, recent }) {
+export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll }) {
     const { auth, branding } = usePage().props;
     const appName = branding?.app_name || 'NA E-Ticket';
     const isSoldier = stats?.isSoldier;
     const roles = auth.user?.roles || [];
+    const scopeLabel = scope || stats?.scope || 'personal';
+    const showToggle = canSeeAll || stats?.scope;
     const [q, setQ] = useState('');
     const [answer, setAnswer] = useState(null);
     const [loadingAi, setLoadingAi] = useState(false);
@@ -23,7 +25,8 @@ export default function Dashboard({ stats, ai, recent }) {
     const askAi = async () => {
         if (!q.trim()) return;
         setLoadingAi(true);
-        const res = await fetch('/ai/ask', { method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ q }) });
+        const scopeQs = isAll ? '?scope=all' : '';
+        const res = await fetch('/ai/ask'+scopeQs, { method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify({ q }) });
         const j = await res.json();
         setAnswer(j.answer);
         setLoadingAi(false);
@@ -78,6 +81,15 @@ export default function Dashboard({ stats, ai, recent }) {
                 <div>
                     <h1 className="text-2xl font-bold">Command Dashboard — {auth.user?.rank} {auth.user?.name}</h1>
                     <p className="text-slate-500 text-sm">{appName} • {roles.join(', ')} • {auth.user?.unit || '—'} • {auth.user?.service_number}</p>
+                    {!isSoldier && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <span className={`text-xs px-2 py-1 rounded-full border ${isAll ? 'bg-slate-800 text-white border-slate-800' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>{isAll ? 'Scope: All tickets' : `Scope: ${scopeLabel} — showing only your department/unit/assigned tickets`}</span>
+                            {canSeeAll && (
+                                <Link href={isAll ? '/dashboard?scope=scoped' : '/dashboard?scope=all'} className="text-xs underline text-[#0b3d0b]">{isAll ? 'Switch to My Scope' : 'View All (privileged)'}</Link>
+                            )}
+                            <Link href="/tickets" className="text-xs underline text-slate-600">Go to tickets</Link>
+                        </div>
+                    )}
                 </div>
                 <Link href="/officers" className="bg-[#0b3d0b] text-white px-4 py-2 rounded text-sm hidden md:block">View Officers & Faces →</Link>
             </div>
@@ -154,7 +166,7 @@ export default function Dashboard({ stats, ai, recent }) {
 
             <div className="grid md:grid-cols-3 gap-6 mt-6">
                 <div className="md:col-span-2 bg-white border rounded-xl p-5">
-                    <h3 className="font-semibold">Recent Tickets</h3>
+                    <h3 className="font-semibold">Recent Tickets {isAll ? '(All)' : `(${scopeLabel})`}</h3>
                     <div className="divide-y mt-3">
                         {recent?.length ? recent.map(t=>(
                             <Link key={t.id} href={`/tickets/${t.id}`} className="flex justify-between py-2 hover:bg-slate-50 px-2 rounded text-sm">

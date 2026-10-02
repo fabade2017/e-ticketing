@@ -6,6 +6,8 @@ export default function SideMenu() {
     const { auth } = usePage().props;
     const user = auth?.user;
     const roles = user?.roles || [];
+    const perms = user?.permissions || [];
+    const hasPerm = (p) => perms.includes(p) || roles.includes('SuperAdmin');
     const isSuperAdmin = roles.includes('SuperAdmin');
     const isAdmin = roles.includes('Admin') || isSuperAdmin;
     const [collapsed, setCollapsed] = useState(false);
@@ -46,12 +48,12 @@ export default function SideMenu() {
         { label: 'Departments', href: '/admin/departments', icon: '🏢', show: isSuperAdmin },
         { label: 'Branding', href: '/admin/branding', icon: '🎨', show: isSuperAdmin },
         { label: 'Reports', href: '/reports', icon: '📊', show: isPrivileged },
-        { label: 'Knowledge Base', href: '/kb', icon: '📚', show: !!user },
+        { label: 'Knowledge Base', href: '/kb', icon: '📚', show: hasPerm('view knowledge base') },
         { label: 'Download App', href: '/download', icon: '⬇', show: true },
-        { label: 'Proposal Coverage', href: '/proposal', icon: '✓', show: true },
-        { label: 'Help', href: '/help', icon: '?', show: true },
-        { label: 'About', href: '/about', icon: 'ℹ', show: true },
-        { label: 'Documentation', href: '/docs', icon: '📄', show: true },
+        { label: 'Proposal Coverage', href: '/proposal', icon: '✓', show: hasPerm('view proposal coverage') },
+        { label: 'Help', href: '/help', icon: '?', show: hasPerm('view help') },
+        { label: 'About', href: '/about', icon: 'ℹ', show: hasPerm('view about') },
+        { label: 'Documentation', href: '/docs', icon: '📄', show: hasPerm('view documentation') },
     ];
 
     if (!user) return null;

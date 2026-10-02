@@ -16,12 +16,16 @@ class DatabaseSeeder extends Seeder
         $roles = ['SuperAdmin', 'Admin', 'Support', 'Soldier'];
         foreach ($roles as $r) Role::firstOrCreate(['name' => $r]);
 
-        $perms = ['manage tickets', 'manage users', 'toggle face mode', 'view reports'];
+        $perms = [
+            'manage tickets', 'manage users', 'toggle face mode', 'view reports',
+            'view proposal coverage', 'view documentation', 'view help', 'view about', 'view knowledge base'
+        ];
         foreach ($perms as $p) Permission::firstOrCreate(['name' => $p]);
 
         Role::findByName('SuperAdmin')->givePermissionTo($perms);
-        Role::findByName('Admin')->givePermissionTo(['manage tickets', 'manage users', 'view reports']);
-        Role::findByName('Support')->givePermissionTo(['manage tickets', 'view reports']);
+        Role::findByName('Admin')->givePermissionTo(['manage tickets', 'manage users', 'view reports', 'view proposal coverage', 'view documentation', 'view help', 'view about', 'view knowledge base']);
+        Role::findByName('Support')->givePermissionTo(['manage tickets', 'view reports', 'view proposal coverage', 'view documentation', 'view help', 'view about', 'view knowledge base']);
+        Role::findByName('Soldier')->givePermissionTo(['view proposal coverage', 'view documentation', 'view help', 'view about', 'view knowledge base']);
 
         // SuperAdmin - can toggle Local/Cloud
         $sa = User::firstOrCreate(['email' => 'superadmin@army.mil.ng'], [

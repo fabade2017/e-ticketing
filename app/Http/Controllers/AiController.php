@@ -8,16 +8,24 @@ use Illuminate\Support\Facades\Http;
 
 class AiController extends Controller
 {
-    public function insights()
+    public function insights(Request $request)
     {
-        return response()->json(AiInsightsService::generate());
+        $user = $request->user();
+        $isAll = $request->input('scope') === 'all' && $user && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
+        if ($user && $user->hasRole('SuperAdmin') && !$request->has('scope')) $isAll = true;
+        $scopedUser = $isAll ? null : $user;
+        return response()->json(AiInsightsService::generate(['user'=>$scopedUser]));
     }
 
     public function ask(Request $request)
     {
         $request->validate(['q' => 'required|string|max:500']);
         $q = $request->q;
-        $data = AiInsightsService::generate();
+        $user = $request->user();
+        $isAll = $request->input('scope') === 'all' && $user && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
+        if ($user && $user->hasRole('SuperAdmin') && !$request->has('scope')) $isAll = true;
+        $scopedUser = $isAll ? null : $user;
+        $data = AiInsightsService::generate(['user'=>$scopedUser]);
 
         // Try Groq LLM if key present — world-class Army prompt
         $key = config('ai.key');

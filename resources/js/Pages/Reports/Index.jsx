@@ -1,11 +1,24 @@
 import Layout from '../../Components/Layout';
 import { Link } from '@inertiajs/react';
 
-export default function ReportsIndex({ report, narrative, canGenerate }) {
+export default function ReportsIndex({ report, narrative, canGenerate, scope, isAll, canSeeAll }) {
     return (
         <Layout>
-            <h1 className="text-2xl font-bold">World-Class Army Reports — SITREP</h1>
-            <p className="text-sm text-slate-600">{report.classification} • {new Date(report.generated_at).toLocaleString()} • Readiness <span className={`px-2 py-0.5 rounded text-xs ${report.readiness==='GREEN'?'bg-green-600 text-white': report.readiness==='AMBER'?'bg-amber-500 text-black':'bg-red-600 text-white'}`}>{report.readiness}</span></p>
+            <div className="flex justify-between items-start">
+                <div>
+                    <h1 className="text-2xl font-bold">World-Class Army Reports — SITREP</h1>
+                    <p className="text-sm text-slate-600">{report.classification} • {new Date(report.generated_at).toLocaleString()} • Readiness <span className={`px-2 py-0.5 rounded text-xs ${report.readiness==='GREEN'?'bg-green-600 text-white': report.readiness==='AMBER'?'bg-amber-500 text-black':'bg-red-600 text-white'}`}>{report.readiness}</span></p>
+                    <div className="mt-2 flex gap-2 items-center">
+                        <span className={`text-xs px-2 py-1 rounded-full border ${isAll ? 'bg-slate-800 text-white border-slate-800' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>{isAll ? 'Scope: All tickets' : `Scope: ${scope || 'personal'} — filtered to your visible tickets`}</span>
+                        {canSeeAll && (
+                            isAll
+                                ? <Link href="/reports" className="text-xs underline text-[#0b3d0b]">Switch to My Scope</Link>
+                                : <Link href="/reports?scope=all" className="text-xs underline text-[#0b3d0b]">View All (privileged)</Link>
+                        )}
+                    </div>
+                </div>
+                <a href={isAll ? '/reports/download?scope=all' : '/reports/download'} className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold hidden md:block">Download SITREP .txt</a>
+            </div>
 
             <div className="grid md:grid-cols-3 gap-4 mt-6">
                 {[
@@ -33,7 +46,7 @@ export default function ReportsIndex({ report, narrative, canGenerate }) {
                 <h3 className="font-bold">🤖 AI SITREP Narrative {canGenerate ? '(Groq)' : '(Local — add GROQ_API_KEY for Groq)'}</h3>
                 {narrative ? <pre className="bg-white text-slate-800 rounded p-4 mt-3 text-sm whitespace-pre-wrap break-words">{narrative}</pre> : <p className="text-sm opacity-80 mt-3">No LLM narrative — rule-based insights above. Add Groq key to generate world-class SITREP.</p>}
                 <div className="mt-4 flex gap-3">
-                    <a href="/reports/download" className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold">Download SITREP .txt</a>
+                    <a href={isAll ? '/reports/download?scope=all' : '/reports/download'} className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold">Download SITREP .txt</a>
                     <Link href="/dashboard" className="border border-white/30 px-4 py-2 rounded text-sm">Back to Dashboard</Link>
                 </div>
             </div>

@@ -10,7 +10,7 @@ use Spatie\Permission\Models\Role;
 
 class AdminController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $user = auth()->user();
         $isSoldier = $user->hasRole('Soldier') && !$user->hasAnyRole(['SuperAdmin','Admin','Support']);
@@ -26,22 +26,86 @@ class AdminController extends Controller
                 ],
                 'ai' => null,
                 'recent' => \App\Models\Ticket::where('user_id',$user->id)->latest()->limit(5)->get(),
+                'scope' => 'personal',
+                'canSeeAll' => false,
             ]);
         }
-        $ai = \App\Services\AiInsightsService::generate();
+
+        // RBAC-aware dashboard: SuperAdmin sees all, others see scoped view by default
+        $canSeeAll = $user->hasAnyRole(['SuperAdmin','Admin','Support']);
+        $scope = $request->input('scope', 'scoped');
+        // soldier cannot use scope=all, privileged can opt-in via ?scope=all
+        $isAll = $scope === 'all' && $canSeeAll;
+        // special case: SuperAdmin's scoped == all, keep consistent flag
+        if ($user->hasRole('SuperAdmin') && $scope !== 'all') {
+            // SuperAdmin defaults to all but can still use scoped if explicitly asked
+            $isAll = $scope === 'all' || $scope === 'scoped' ? false : $isAll;
+            // Actually SuperAdmin scoped vs all distinction: default all for backwards compat
+            if ($scope === 'scoped' && !$request->has('scope')) {
+                // default for SuperAdmin remains 'all'
+                $isAll = false;
+            }
+            // Normalize: if SuperAdmin with no param => show all
+            if (!$request->has('scope')) $isAll = true;
+        }
+
+        // Build scoped base query
+        $base = \App\Models\Ticket::query();
+        if (!$isAll) {
+            $base->visibleTo($user);
+        }
+
+        // Pass user-scoped AI (reports honour same visibility)
+        $ai = \App\Services\AiInsightsService::generate(['user' => $isAll ? null : $user, 'from' => $request->input('from'), 'to' => $request->input('to')]);
+
+        // Stats limited to visible scope
+        $scopedOpen = (clone $base)->where('status','open')->count();
+        $scopedProgress = (clone $base)->where('status','in_progress')->count();
+        $scopedResolved = (clone $base)->where('status','resolved')->count();
+        $scopedClosed = (clone $base)->where('status','closed')->count();
+        $scopedTotal = (clone $base)->count();
+
+        // Users/face stats: scoped for Admin/Support to department/unit, global for SuperAdmin/all-view
+        if ($isAll || $user->hasRole('SuperAdmin')) {
+            $usersCount = User::count();
+            $faceEnrolled = User::whereNotNull('face_embedding')->count();
+        } else {
+            $uQ = User::query();
+            if ($user->department_id) $uQ->where('department_id', $user->department_id);
+            elseif ($user->unit) $uQ->where('unit', $user->unit);
+            else $uQ->where('id', $user->id);
+            $usersCount = (clone $uQ)->count();
+            $faceEnrolled = (clone $uQ)->whereNotNull('face_embedding')->count();
+        }
+
+        $recent = (clone $base)->with('user')->latest()->limit(5)->get();
+
+        $scopeLabel = $isAll ? 'all' : ($user->hasRole('SuperAdmin') ? 'scoped' : 'personal');
+        // For Admin/Support, label as department/unit/personal depending
+        if (!$isAll && !$user->hasRole('SuperAdmin')) {
+            if ($user->department_id) $scopeLabel = 'department';
+            elseif ($user->unit) $scopeLabel = 'unit';
+            else $scopeLabel = 'personal';
+        }
+
         return Inertia::render('Dashboard', [
             'stats' => array_merge([
-                'open' => \App\Models\Ticket::where('status', 'open')->count(),
-                'progress' => \App\Models\Ticket::where('status', 'in_progress')->count(),
-                'resolved' => \App\Models\Ticket::where('status', 'resolved')->count(),
-                'closed' => \App\Models\Ticket::where('status', 'closed')->count(),
-                'total' => \App\Models\Ticket::count(),
-                'users' => User::count(),
-                'face_enrolled' => User::whereNotNull('face_embedding')->count(),
+                'open' => $scopedOpen,
+                'progress' => $scopedProgress,
+                'resolved' => $scopedResolved,
+                'closed' => $scopedClosed,
+                'total' => $scopedTotal,
+                'users' => $usersCount,
+                'face_enrolled' => $faceEnrolled,
                 'isSoldier' => false,
+                'scope' => $scopeLabel,
+                'isAll' => $isAll,
             ], $ai['stats']),
             'ai' => $ai,
-            'recent' => \App\Models\Ticket::with('user')->latest()->limit(5)->get(),
+            'recent' => $recent,
+            'scope' => $scopeLabel,
+            'canSeeAll' => $canSeeAll,
+            'isAll' => $isAll,
         ]);
     }
 

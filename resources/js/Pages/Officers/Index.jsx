@@ -2,19 +2,32 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
 
-export default function Index({ officers, filters, roles, stats }) {
+export default function Index({ officers, filters, roles, stats, scope, isAll, canSeeAll }) {
     const [search, setSearch] = useState(filters?.search || '');
     const [role, setRole] = useState(filters?.role || '');
     const [face, setFace] = useState(filters?.face || '');
 
-    const apply = () => router.get('/officers', { search, role, face }, { preserveState: true, replace: true });
+    const apply = () => {
+        const params = { search, role, face };
+        if (!isAll && filters?.scope) params.scope = filters.scope;
+        if (isAll) params.scope = 'all';
+        router.get('/officers', params, { preserveState: true, replace: true });
+    };
 
     return (
         <Layout>
             <div className="flex justify-between items-start">
                 <div>
                     <h1 className="text-2xl font-bold">Officers — {stats.total} total, {stats.enrolled} face-enrolled</h1>
-                    <p className="text-sm text-slate-600">All army personnel • Face enrollment shows ◉ green (enrolled) / ○ pending • SuperAdmin can enroll via Admin → Branding/Face Settings</p>
+                    <p className="text-sm text-slate-600">Army personnel • Face enrollment shows ◉ green (enrolled) / ○ pending • SuperAdmin can enroll via Admin → Branding/Face Settings</p>
+                    <div className="mt-2 flex gap-2 items-center">
+                        <span className={`text-xs px-2 py-1 rounded-full border ${isAll ? 'bg-slate-800 text-white border-slate-800' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>{isAll ? 'Scope: All officers' : `Scope: ${scope || 'department/unit'} — filtered to your department/unit`}</span>
+                        {canSeeAll && (
+                            isAll
+                                ? <Link href="/officers" className="text-xs underline text-[#0b3d0b]">Switch to My Scope</Link>
+                                : <Link href="/officers?scope=all" className="text-xs underline text-[#0b3d0b]">View All</Link>
+                        )}
+                    </div>
                 </div>
                 <Link href="/admin/users/bulk" className="bg-[#0b3d0b] text-white px-4 py-2 rounded text-sm hidden md:block">Bulk Upload →</Link>
             </div>
