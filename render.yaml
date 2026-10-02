@@ -6,6 +6,8 @@ services:
     plan: free
     healthCheckPath: /up
     envVars:
+      - key: APP_NAME
+        value: NA E-Ticket
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
