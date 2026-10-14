@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class ChatFriendsPermissionTest extends TestCase
@@ -56,5 +57,36 @@ class ChatFriendsPermissionTest extends TestCase
 
         $this->actingAs($sa)->get('/chat')->assertOk();
         $this->actingAs($sa)->get('/friends')->assertOk();
+    }
+
+    public function test_roles_page_lists_chat_and_friends_permissions(): void
+    {
+        $sa = User::where('email', 'superadmin@army.mil.ng')->first();
+
+        $this->actingAs($sa)->get('/admin/roles')->assertInertia(fn ($page) => $page
+            ->where('permissions', fn ($perms) => collect($perms)->contains('use chat') && collect($perms)->contains('use friends'))
+        );
+    }
+
+    public function test_superadmin_bypasses_permission_checks_even_with_none_assigned(): void
+    {
+        $sa = User::where('email', 'superadmin@army.mil.ng')->first();
+        Role::findByName('SuperAdmin')->syncPermissions([]);
+        $sa->syncPermissions([]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->assertFalse($sa->fresh()->hasPermissionTo('use chat'));
+
+        $this->actingAs($sa->fresh())->get('/chat')->assertOk();
+        $this->actingAs($sa->fresh())->get('/friends')->assertOk();
+    }
+
+    public function test_new_permissions_are_auto_granted_to_superadmin(): void
+    {
+        $sa = User::where('email', 'superadmin@army.mil.ng')->first();
+
+        $this->actingAs($sa)->post('/admin/permissions', ['name' => 'view intel reports'])->assertRedirect();
+
+        $this->assertTrue(Role::findByName('SuperAdmin')->hasPermissionTo('view intel reports'));
     }
 }

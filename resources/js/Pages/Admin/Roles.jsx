@@ -10,7 +10,10 @@ export default function Roles({ roles, permissions, users }) {
 
     const createRole = e => { e.preventDefault(); router.post('/admin/roles', newRole); };
     const createPerm = e => { e.preventDefault(); router.post('/admin/permissions', { name: newPerm }); };
-    const updateRolePerms = (roleId) => router.put(`/admin/roles/${roleId}`, { permissions: selPerms[roleId] || [] });
+    const updateRolePerms = (role) => {
+        const perms = selPerms[role.id] ?? role.permissions.map(p => p.name);
+        router.put(`/admin/roles/${role.id}`, { permissions: perms });
+    };
     const deleteRole = (roleId) => { if(confirm('Delete role?')) router.delete(`/admin/roles/${roleId}`); };
     const assignRoles = e => { e.preventDefault(); router.post('/admin/users/assign-role', assign); };
 
@@ -84,7 +87,7 @@ export default function Roles({ roles, permissions, users }) {
                                 </div>
                             </div>
                             <div className="flex gap-2 self-start">
-                                <button onClick={()=>updateRolePerms(r.id)} className="bg-[#0b3d0b] text-white px-3 py-1 rounded text-sm">Save Perms</button>
+                                <button onClick={()=>updateRolePerms(r)} className="bg-[#0b3d0b] text-white px-3 py-1 rounded text-sm">Save Perms</button>
                                 <button onClick={()=>deleteRole(r.id)} className="bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
                             </div>
                         </div>
