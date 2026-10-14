@@ -70,7 +70,13 @@ class BrandingController extends Controller
             SystemSetting::setValue('app_logo', '');
         } elseif ($request->hasFile('logo')) {
             $this->deleteLegacyFile();
-            BrandingLogo::store($request->file('logo'));
+            try {
+                BrandingLogo::store($request->file('logo'));
+            } catch (\Throwable $e) {
+                report($e);
+
+                return back()->with('error', 'Could not store the logo — the branding table is missing (pending migration). Please redeploy or run the migrations.');
+            }
             SystemSetting::setValue('app_logo', 'branding/logo');
         }
 

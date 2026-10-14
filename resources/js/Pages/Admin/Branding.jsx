@@ -37,6 +37,7 @@ export default function Branding({ branding }) {
             <h1 className="text-2xl font-bold">Branding — Logo, Name & Motto</h1>
             <p className="text-sm text-slate-600">SuperAdmin only. Changes reflect instantly in header, side menu and login. Logo max 2MB (png/jpg/svg/webp).</p>
             {flash?.success && <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded mt-4 text-sm">{flash.success}</div>}
+            {flash?.error && <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded mt-4 text-sm">{flash.error}</div>}
 
             <div className="grid md:grid-cols-2 gap-6 mt-6">
                 <form onSubmit={submit} className="bg-white border rounded-xl p-6 space-y-4">
