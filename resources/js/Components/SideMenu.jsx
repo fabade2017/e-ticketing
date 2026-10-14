@@ -23,22 +23,22 @@ export default function SideMenu() {
     const [unread, setUnread] = useState(0);
 
     useEffect(()=>{
-        if (!user) return;
+        if (!user || !hasPerm('use chat')) return;
         const fetchUnread = async ()=>{
             try { const r = await fetch('/chat/unread', { headers:{'Accept':'application/json'}}); if (r.ok) { const j = await r.json(); setUnread(j.total || 0); } } catch(e){}
         };
         fetchUnread();
         const id = setInterval(fetchUnread, 5000);
         return ()=> clearInterval(id);
-    }, [user?.id]);
+    }, [user?.id, perms.join(',')]);
 
     const items = [
         { label: 'Dashboard', href: '/dashboard', icon: '▣', show: !!user },
         { label: 'My Tickets', href: '/tickets', icon: '✉', show: isSoldier },
         { label: 'Tickets', href: '/tickets', icon: '✉', show: isPrivileged },
         { label: 'New Ticket', href: '/tickets/create', icon: '+', show: !!user },
-        { label: 'Chat', href: '/chat', icon: '💬', show: !!user },
-        { label: 'Friends', href: '/friends', icon: '🤝', show: !!user },
+        { label: 'Chat', href: '/chat', icon: '💬', show: hasPerm('use chat') },
+        { label: 'Friends', href: '/friends', icon: '🤝', show: hasPerm('use friends') },
         { label: 'Officers & Faces', href: '/officers', icon: '◉', show: canViewOfficers },
         { label: 'Users', href: '/admin/users', icon: '👥', show: canViewUsers, badge: isSuperAdmin ? 'RBAC' : null },
         { label: 'Users CRUD', href: '/admin/users/crud', icon: '👤', show: isSuperAdmin },

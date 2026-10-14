@@ -3,7 +3,8 @@ import { useState } from 'react';
 import Layout from '../../Components/Layout';
 
 export default function FriendsIndex({ users, friends, pendingReceived, pendingSent, groupRequests, filters }) {
-    const { flash } = usePage().props;
+    const { flash, auth } = usePage().props;
+    const canChat = (auth?.user?.permissions || []).includes('use chat') || (auth?.user?.roles || []).includes('SuperAdmin');
     const [search, setSearch] = useState(filters?.search || '');
     const [msg, setMsg] = useState({});
 
@@ -42,7 +43,7 @@ export default function FriendsIndex({ users, friends, pendingReceived, pendingS
                                 <div className="flex flex-col gap-1">
                                     <input value={msg[u.id]||''} onChange={e=>setMsg({...msg, [u.id]: e.target.value})} placeholder="Hello..." className="border rounded px-2 py-1 text-xs w-28" />
                                     <button onClick={()=>sendColleague(u.id)} className="bg-[#0b3d0b] text-white px-3 py-1 rounded text-xs">+ Add Colleague</button>
-                                    <button onClick={()=>router.post(`/chat/direct/${u.id}`)} className="bg-slate-800 text-white px-3 py-1 rounded text-xs">💬 Direct Chat</button>
+                                    {canChat && <button onClick={()=>router.post(`/chat/direct/${u.id}`)} className="bg-slate-800 text-white px-3 py-1 rounded text-xs">💬 Direct Chat</button>}
                                 </div>
                             </div>
                         ))}
@@ -58,12 +59,12 @@ export default function FriendsIndex({ users, friends, pendingReceived, pendingS
                                 {friends.map(f=>(
                                     <div key={f.id} className="py-2 flex justify-between items-center">
                                         <div><div className="text-sm font-medium">{f.rank} {f.name}</div><div className="text-xs text-slate-500">{f.service_number}</div></div>
-                                        <button onClick={()=>router.post(`/chat/direct/${f.id}`)} className="bg-[#0b3d0b] text-white px-3 py-1 rounded text-xs">💬 Chat</button>
+                                        {canChat && <button onClick={()=>router.post(`/chat/direct/${f.id}`)} className="bg-[#0b3d0b] text-white px-3 py-1 rounded text-xs">💬 Chat</button>}
                                     </div>
                                 ))}
                             </div>
                         )}
-                        <Link href="/chat" className="text-xs underline mt-3 inline-block">Go to Chat →</Link>
+                        {canChat && <Link href="/chat" className="text-xs underline mt-3 inline-block">Go to Chat →</Link>}
                     </div>
 
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
