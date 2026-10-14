@@ -7,6 +7,7 @@ export default function Branding({ branding }) {
     const { data, setData, post, processing, errors } = useForm({
         app_name: branding.app_name || 'NA E-Ticket',
         app_motto: branding.app_motto || 'Secure • Offline-Capable • Nigerian Army',
+        app_download_url: branding.app_download_url || '',
         logo: null,
         remove_logo: false,
     });
@@ -52,6 +53,12 @@ export default function Branding({ branding }) {
                         {errors.app_motto && <p className="text-red-600 text-xs">{errors.app_motto}</p>}
                     </div>
                     <div>
+                        <label className="text-sm font-medium">Soldier App APK Link</label>
+                        <input value={data.app_download_url} onChange={e=>setData('app_download_url', e.target.value)} placeholder="https://expo.dev/accounts/…/builds/…" className="w-full border rounded px-3 py-2 mt-1" />
+                        <p className="text-xs text-slate-500 mt-1">Paste the latest Expo EAS build URL. The <code>/download</code> page updates instantly.</p>
+                        {errors.app_download_url && <p className="text-red-600 text-xs">{errors.app_download_url}</p>}
+                    </div>
+                    <div>
                         <label className="text-sm font-medium">Logo</label>
                         <input type="file" accept="image/*" onChange={onFile} className="w-full border rounded px-3 py-2 mt-1" />
                         {errors.logo && <p className="text-red-600 text-xs">{errors.logo}</p>}
@@ -77,6 +84,7 @@ export default function Branding({ branding }) {
                         <div><b>Name:</b> {branding.app_name}</div>
                         <div><b>Motto:</b> {branding.app_motto}</div>
                         <div><b>Logo:</b> {branding.app_logo || '— none (using NA badge)'} </div>
+                        <div className="break-all"><b>APK link:</b> {branding.app_download_url || '— none'}</div>
                         {branding.logo_url ? <img src={branding.logo_url + (branding.logo_url.includes('?')?'&':'?') + 'v=' + Date.now()} alt="current logo" className="w-24 h-24 border rounded object-contain mt-2 bg-white p-2" onError={e=>{e.target.style.display='none'; e.target.nextSibling && (e.target.nextSibling.style.display='block');}} /> : <span className="text-xs text-slate-400">No logo uploaded yet — upload above.</span>}
                         {branding.logo_url && <div style={{display:'none'}} className="text-xs text-amber-600 mt-1">Image failed to load — try re-uploading the logo.</div>}
                     </div>

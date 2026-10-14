@@ -18,10 +18,11 @@ class BrandingController extends Controller
 
         return Inertia::render('Admin/Branding', [
             'branding' => [
-                'app_name' => SystemSetting::getValue('app_name', 'NA E-Ticket'),
-                'app_motto' => SystemSetting::getValue('app_motto', 'Secure • Offline-Capable • Nigerian Army'),
+                'app_name' => SystemSetting::getValue('app_name', config('branding.app_name', 'NA E-Ticket')),
+                'app_motto' => SystemSetting::getValue('app_motto', config('branding.app_motto', 'Secure • Offline-Capable • Nigerian Army')),
                 'app_logo' => BrandingLogo::displayName(),
                 'logo_url' => BrandingLogo::url(),
+                'app_download_url' => SystemSetting::getValue('app_download_url', config('branding.download_url')),
             ],
         ]);
     }
@@ -57,12 +58,16 @@ class BrandingController extends Controller
         $request->validate([
             'app_name' => 'required|string|max:100',
             'app_motto' => 'required|string|max:200',
+            'app_download_url' => 'nullable|string|max:500|url',
             'logo' => 'nullable|image|mimes:png,jpg,jpeg,svg,webp|max:2048',
             'remove_logo' => 'boolean',
         ]);
 
         SystemSetting::setValue('app_name', $request->app_name);
         SystemSetting::setValue('app_motto', $request->app_motto);
+        if ($request->has('app_download_url')) {
+            SystemSetting::setValue('app_download_url', (string) $request->app_download_url);
+        }
 
         if ($request->boolean('remove_logo')) {
             $this->deleteLegacyFile();

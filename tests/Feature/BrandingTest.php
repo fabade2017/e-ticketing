@@ -48,6 +48,40 @@ class BrandingTest extends TestCase
         $this->assertSame('Semper Fidelis', SystemSetting::getValue('app_motto'));
     }
 
+    public function test_download_url_is_configurable_and_shared(): void
+    {
+        $url = 'https://expo.dev/accounts/adetone007/projects/na-soldier-app/builds/newbuild-1234';
+
+        $this->get('/download')->assertInertia(fn ($page) => $page
+            ->where('branding.app_download_url', config('branding.download_url'))
+        );
+
+        $this->actingAs($this->superadmin())
+            ->post('/admin/branding', [
+                'app_name' => 'Army',
+                'app_motto' => 'Motto',
+                'app_download_url' => $url,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame($url, SystemSetting::getValue('app_download_url'));
+
+        $this->get('/download')->assertInertia(fn ($page) => $page
+            ->where('branding.app_download_url', $url)
+        );
+    }
+
+    public function test_download_url_must_be_a_valid_url(): void
+    {
+        $this->actingAs($this->superadmin())
+            ->post('/admin/branding', [
+                'app_name' => 'Army',
+                'app_motto' => 'Motto',
+                'app_download_url' => 'not-a-url',
+            ])
+            ->assertSessionHasErrors('app_download_url');
+    }
+
     public function test_logo_is_stored_in_database_and_served_publicly(): void
     {
         $this->actingAs($this->superadmin())
