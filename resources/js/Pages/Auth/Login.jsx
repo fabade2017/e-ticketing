@@ -15,17 +15,18 @@ export default function Login() {
 
     const submit = e => { e.preventDefault(); post('/login'); };
 
-    const handleFaceVerify = async (embedding) => {
+    const handleFaceVerify = async (embedding, image) => {
         if (!data.service_number) { setFaceMessage('Enter Service Number first'); return; }
         setFaceMessage('Verifying face (' + mode + ' mode)...');
         try {
             const res = await fetch('/face/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
-                body: JSON.stringify({ service_number: data.service_number, embedding }),
+                body: JSON.stringify({ service_number: data.service_number, embedding, image }),
             });
             const json = await res.json();
-            setFaceMessage(json.message + ` (similarity: ${json.similarity?.toFixed(3) || 'n/a'}, mode:${json.mode})`);
+            const backend = json.cloud_used ? 'cloud' : 'local';
+            setFaceMessage(json.message + ` (similarity: ${json.similarity?.toFixed(3) || 'n/a'}, mode:${json.mode}, verified:${backend})`);
             if (res.ok) window.location.href = json.redirect || '/dashboard';
         } catch (e) { setFaceMessage('Verification error: ' + e.message); }
     };
@@ -40,7 +41,7 @@ export default function Login() {
             <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8 mt-6">
                 <div className="bg-white p-8 rounded-xl border shadow">
                     <h2 className="text-2xl font-bold">Personnel Login</h2>
-                    <p className="text-sm text-slate-500">Service Number + Password or Face ID ({mode})</p>
+                    <p className="text-sm text-slate-500">Service Number + Password{faceEnabled ? ` or Face ID (${mode})` : ''}</p>
                     <form onSubmit={submit} className="mt-6 space-y-4">
                         <div>
                             <label className="text-sm font-medium">Service Number</label>

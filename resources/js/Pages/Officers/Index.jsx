@@ -1,11 +1,28 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
+import FaceAuth from '../../Components/FaceAuth';
 
 export default function Index({ officers, filters, roles, stats, scope, isAll, canSeeAll }) {
+    const page = usePage();
+    const userRoles = page.props.auth?.user?.roles || [];
+    const canEnroll = userRoles.includes('SuperAdmin') || userRoles.includes('Admin');
+    const faceMode = page.props.systemSettings?.face_auth_mode || 'local';
     const [search, setSearch] = useState(filters?.search || '');
     const [role, setRole] = useState(filters?.role || '');
     const [face, setFace] = useState(filters?.face || '');
+    const [enrollTarget, setEnrollTarget] = useState(null);
+
+    const handleEnroll = async (embedding, image) => {
+        if (!enrollTarget) return;
+        const res = await fetch('/face/enroll', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+            body: JSON.stringify({ user_id: enrollTarget.id, embedding, image }),
+        });
+        if (res.ok) { setEnrollTarget(null); router.reload(); }
+        else { alert(await res.text()); }
+    };
 
     const apply = () => {
         const params = { search, role, face };
@@ -75,6 +92,7 @@ export default function Index({ officers, filters, roles, stats, scope, isAll, c
                             </div>
                             <div className="mt-3 flex gap-2">
                                 <Link href={`/admin/users?search=${o.service_number}`} className="flex-1 border text-center py-1 rounded text-xs">Manage</Link>
+                                {canEnroll && <button onClick={()=>setEnrollTarget(o)} className="flex-1 border text-center py-1 rounded text-xs">{o.face_enrolled_at ? 'Re-enroll' : 'Enroll Face'}</button>}
                                 <button onClick={()=>router.post(`/chat/direct/${o.id}`)} className="flex-1 bg-[#0b3d0b] text-white text-center py-1 rounded text-xs">💬 Chat</button>
                             </div>
                         </div>
@@ -94,6 +112,18 @@ export default function Index({ officers, filters, roles, stats, scope, isAll, c
             <div className="bg-white border rounded-xl p-4 mt-6 text-xs text-slate-600">
                 <b>By Rank:</b> {Object.entries(stats.byRank || {}).map(([k,v])=>`${k}:${v}`).join(' • ') || '—'} • View full RBAC at <Link href="/admin/roles" className="underline">Roles & Permissions</Link> • Enroll faces at <Link href="/admin/settings" className="underline">Face Settings</Link>
             </div>
+
+            {enrollTarget && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={()=>setEnrollTarget(null)}>
+                    <div className="bg-white rounded-xl max-w-lg w-full p-4" onClick={e=>e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-semibold">Enroll Face — {enrollTarget.rank} {enrollTarget.name}</h3>
+                            <button onClick={()=>setEnrollTarget(null)} className="text-slate-500 px-2">✕</button>
+                        </div>
+                        <FaceAuth mode={faceMode} onEmbedding={handleEnroll} />
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 }

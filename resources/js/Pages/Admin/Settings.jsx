@@ -12,12 +12,12 @@ export default function Settings({ settings }) {
     const [enrollUserId, setEnrollUserId] = useState('');
     const submit = e => { e.preventDefault(); post('/admin/settings/face'); };
 
-    const handleEnroll = async (embedding) => {
+    const handleEnroll = async (embedding, image) => {
         if (!enrollUserId) { alert('Enter User ID to enroll'); return; }
         const res = await fetch('/face/enroll', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
-            body: JSON.stringify({ user_id: parseInt(enrollUserId), embedding }),
+            body: JSON.stringify({ user_id: parseInt(enrollUserId), embedding, image }),
         });
         alert(res.ok ? 'Enrolled' : await res.text());
     };

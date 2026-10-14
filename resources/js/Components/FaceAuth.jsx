@@ -48,6 +48,16 @@ export default function FaceAuth({ mode = 'local', onEmbedding, onVerifyResult }
         };
     }, [mode]);
 
+    const captureImage = () => {
+        const video = videoRef.current;
+        if (!video || !video.videoWidth) return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+    };
+
     const capture = async (action) => {
         if (!faceapi || !videoRef.current) { setStatus('Face module not ready'); return; }
         setStatus('Detecting face...');
@@ -55,9 +65,10 @@ export default function FaceAuth({ mode = 'local', onEmbedding, onVerifyResult }
             const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if (!detection) { setStatus('No face detected. Align face, ensure good light.'); return; }
             const embedding = Array.from(detection.descriptor);
+            const image = captureImage();
             setStatus(`Face captured (${embedding.length}d). Mode: ${mode}`);
-            if (action === 'enroll') onEmbedding?.(embedding);
-            if (action === 'verify') onVerifyResult?.(embedding);
+            if (action === 'enroll') onEmbedding?.(embedding, image);
+            if (action === 'verify') onVerifyResult?.(embedding, image);
         } catch (e) {
             setStatus('Capture failed: ' + e.message);
         }

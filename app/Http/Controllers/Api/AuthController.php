@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\FaceVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function __construct(protected FaceVerificationService $faceVerifier) {}
+
     /**
      * Soldier mobile login - returns Sanctum token
      * POST /api/login
@@ -32,7 +34,7 @@ class AuthController extends Controller
         $field = $request->email ? 'email' : 'service_number';
         $credentials = [$field => $request->$field, 'password' => $request->password, 'is_active' => true];
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials or inactive account'], 401);
         }
 
@@ -64,39 +66,62 @@ class AuthController extends Controller
             'service_number' => 'required|string',
             'embedding' => 'required|array|size:128',
             'embedding.*' => 'numeric',
+            'image' => 'nullable|string',
             'device_name' => 'nullable|string|max:100',
         ]);
 
-        $mode = SystemSetting::getValue('face_auth_mode', config('face_auth.mode', 'local'));
-        $threshold = (float) config('face_auth.threshold', 0.6);
-
-        $user = User::where('service_number', $request->service_number)->first();
-        if (!$user || !$user->face_embedding) {
-            return response()->json(['message' => 'No face enrolled for this service number', 'mode' => $mode], 404);
+        if (SystemSetting::getValue('face_auth_enabled', '1') !== '1') {
+            return response()->json(['message' => 'Face authentication is disabled by SuperAdmin'], 403);
         }
 
-        if (!$user->is_active) {
+        $user = User::where('service_number', $request->service_number)->first();
+        if (! $user || ! $user->face_embedding) {
+            return response()->json(['message' => 'No face enrolled for this service number', 'mode' => $this->faceVerifier->mode()], 404);
+        }
+
+        if (! $user->is_active) {
             return response()->json(['message' => 'Account inactive'], 403);
         }
 
-        $similarity = $this->cosineSimilarity($user->face_embedding, $request->embedding);
+        $result = $this->faceVerifier->verify($user, $request->embedding, $this->decodeImage($request->input('image')));
 
-        if ($similarity >= $threshold) {
+        if ($result['matched']) {
             $user->load(['roles', 'department']);
             $device = $request->input('device_name', 'mobile-face');
             $token = $user->createToken($device)->plainTextToken;
 
             return response()->json([
                 'message' => 'Face verified',
-                'similarity' => $similarity,
-                'mode' => $mode,
+                'similarity' => $result['similarity'],
+                'mode' => $result['mode'],
+                'cloud_used' => $result['cloud_used'],
                 'token' => $token,
                 'token_type' => 'Bearer',
                 'user' => $this->userPayload($user),
             ]);
         }
 
-        return response()->json(['message' => 'Face verification failed', 'similarity' => $similarity, 'mode' => $mode], 401);
+        return response()->json([
+            'message' => 'Face verification failed',
+            'similarity' => $result['similarity'],
+            'mode' => $result['mode'],
+            'cloud_used' => $result['cloud_used'],
+        ], 401);
+    }
+
+    protected function decodeImage(?string $image): ?string
+    {
+        if (empty($image)) {
+            return null;
+        }
+
+        if (str_contains($image, ',')) {
+            $image = substr($image, strpos($image, ',') + 1);
+        }
+
+        $decoded = base64_decode($image, true);
+
+        return $decoded === false ? null : $decoded;
     }
 
     /**
@@ -105,6 +130,7 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user()->load(['roles', 'department']);
+
         return response()->json($this->userPayload($user));
     }
 
@@ -115,6 +141,7 @@ class AuthController extends Controller
     {
         // Revoke current token only
         $request->user()->currentAccessToken()->delete();
+
         return response()->json(['message' => 'Logged out']);
     }
 
@@ -124,6 +151,7 @@ class AuthController extends Controller
     public function logoutAll(Request $request)
     {
         $request->user()->tokens()->delete();
+
         return response()->json(['message' => 'All sessions revoked']);
     }
 
@@ -143,19 +171,5 @@ class AuthController extends Controller
             'roles' => $user->getRoleNames()->toArray(),
             'permissions' => $user->getAllPermissions()->pluck('name')->toArray(),
         ];
-    }
-
-    private function cosineSimilarity(array $a, array $b): float
-    {
-        $dot = 0;
-        $normA = 0;
-        $normB = 0;
-        for ($i = 0; $i < count($a); $i++) {
-            $dot += $a[$i] * $b[$i];
-            $normA += $a[$i] ** 2;
-            $normB += $b[$i] ** 2;
-        }
-        $den = sqrt($normA) * sqrt($normB);
-        return $den == 0 ? 0 : $dot / $den;
     }
 }

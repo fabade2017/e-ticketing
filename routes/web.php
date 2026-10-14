@@ -55,7 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('tickets', TicketController::class);
 
     // Face enrollment (SuperAdmin/Admin)
-    Route::post('/face/enroll', [FaceAuthController::class, 'enroll'])->name('face.enroll');
+    Route::post('/face/enroll', [FaceAuthController::class, 'enroll'])->name('face.enroll')->middleware('role:SuperAdmin|Admin');
 
     // SuperAdmin-only
     Route::middleware('role:SuperAdmin')->group(function () {

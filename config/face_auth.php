@@ -15,9 +15,19 @@ return [
 
     'cloud' => [
         'provider' => env('FACE_CLOUD_PROVIDER', 'aws'), // aws|azure
+
+        /*
+        | Cloud match threshold. AWS Rekognition CompareFaces returns a
+        | percentage (0-100); anything at/above this counts as a match.
+        */
+        'threshold' => env('FACE_CLOUD_THRESHOLD', 80),
+
         'aws' => [
             'region' => env('AWS_DEFAULT_REGION', 'eu-west-1'),
             'collection_id' => env('AWS_REKOGNITION_COLLECTION', 'na-personnel'),
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'session_token' => env('AWS_SESSION_TOKEN'),
         ],
         'azure' => [
             'endpoint' => env('AZURE_FACE_ENDPOINT'),
