@@ -7,12 +7,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title inertia>{{ \App\Models\SystemSetting::getValue('app_name', config('app.name', 'NA E-Ticket')) }}</title>
     @php
-        $__logoPath = \App\Models\SystemSetting::getValue('app_logo');
-        $__logoUrl = null;
-        try { if ($__logoPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($__logoPath)) $__logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($__logoPath); } catch (\Throwable $e) {}
+        $__logoUrl = \App\Models\BrandingLogo::url();
     @endphp
     @if($__logoUrl)
-        <link rel="icon" type="image/webp" href="{{ $__logoUrl }}">
+        <link rel="icon" href="{{ $__logoUrl }}">
         <link rel="apple-touch-icon" href="{{ $__logoUrl }}">
     @endif
     <link rel="preconnect" href="https://fonts.bunny.net">

@@ -30,6 +30,7 @@ Route::get('/download', fn () => Inertia::render('DownloadApp'))->name('download
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
 Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
 Route::post('/face/verify', [FaceAuthController::class, 'verify'])->name('face.verify');
+Route::get('/branding/logo', [BrandingController::class, 'logo'])->name('branding.logo');
 
 Route::get('/kb', [KbController::class, 'index'])->name('kb.index')->middleware('auth');
 Route::post('/kb', [KbController::class, 'store'])->name('kb.store')->middleware(['auth', 'role:SuperAdmin|Admin']);

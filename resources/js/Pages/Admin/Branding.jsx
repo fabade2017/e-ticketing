@@ -59,7 +59,7 @@ export default function Branding({ branding }) {
                         </label>
                     </div>
                     <button disabled={processing} className="w-full bg-[#0b3d0b] text-white py-2 rounded font-semibold">Save Branding</button>
-                    <p className="text-xs text-slate-500">Footer & login hero use motto. Header shows logo + name. Storage: <code>storage/branding/*</code> via <code>public/storage</code>.</p>
+                    <p className="text-xs text-slate-500">Footer & login hero use motto. Header shows logo + name. The logo is stored in the database so it persists across deploys.</p>
                 </form>
 
                 <div className="bg-white border rounded-xl p-6">
@@ -77,7 +77,7 @@ export default function Branding({ branding }) {
                         <div><b>Motto:</b> {branding.app_motto}</div>
                         <div><b>Logo:</b> {branding.app_logo || '— none (using NA badge)'} </div>
                         {branding.logo_url ? <img src={branding.logo_url + (branding.logo_url.includes('?')?'&':'?') + 'v=' + Date.now()} alt="current logo" className="w-24 h-24 border rounded object-contain mt-2 bg-white p-2" onError={e=>{e.target.style.display='none'; e.target.nextSibling && (e.target.nextSibling.style.display='block');}} /> : <span className="text-xs text-slate-400">No logo uploaded yet — upload above.</span>}
-                        {branding.logo_url && <div style={{display:'none'}} className="text-xs text-amber-600 mt-1">Image failed to load — check storage link or re-upload (Render disk is ephemeral).</div>}
+                        {branding.logo_url && <div style={{display:'none'}} className="text-xs text-amber-600 mt-1">Image failed to load — try re-uploading the logo.</div>}
                     </div>
                 </div>
             </div>

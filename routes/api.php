@@ -3,6 +3,10 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\TicketController;
+use App\Models\BrandingLogo;
+use App\Models\Department;
+use App\Models\SystemSetting;
+use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -16,14 +20,14 @@ use Illuminate\Support\Facades\Route;
 
 // Public - branding for mobile header (same as web)
 Route::get('/branding', function () {
-    $name = \App\Models\SystemSetting::getValue('app_name', config('branding.app_name', 'NA E-Ticket'));
-    $motto = \App\Models\SystemSetting::getValue('app_motto', config('branding.app_motto', 'Secure • Offline-Capable'));
-    $logo = \App\Models\SystemSetting::getValue('app_logo', null);
+    $name = SystemSetting::getValue('app_name', config('branding.app_name', 'NA E-Ticket'));
+    $motto = SystemSetting::getValue('app_motto', config('branding.app_motto', 'Secure • Offline-Capable'));
+
     return response()->json([
         'app_name' => $name,
         'app_motto' => $motto,
-        'app_logo' => $logo ? url('storage/'.$logo) : null,
-        'app_logo_path' => $logo,
+        'app_logo' => BrandingLogo::url(),
+        'app_logo_path' => BrandingLogo::displayName(),
     ]);
 })->name('api.branding');
 
@@ -54,12 +58,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Meta - for mobile dropdowns / offline validation
     Route::get('/meta', function (Request $request) {
         return response()->json([
-            'categories' => ['welfare','logistics','medical','equipment','operations','other'],
-            'priorities' => ['low','medium','high','urgent'],
-            'statuses' => ['open','in_progress','resolved','closed'],
-            'sla_hours' => \App\Models\Ticket::SLA_HOURS,
-            'departments' => \App\Models\Department::select('id','name')->get(),
-            'states' => array_keys(\App\Models\Ticket::distinct()->pluck('state','state')->toArray()) ?: [], // fallback
+            'categories' => ['welfare', 'logistics', 'medical', 'equipment', 'operations', 'other'],
+            'priorities' => ['low', 'medium', 'high', 'urgent'],
+            'statuses' => ['open', 'in_progress', 'resolved', 'closed'],
+            'sla_hours' => Ticket::SLA_HOURS,
+            'departments' => Department::select('id', 'name')->get(),
+            'states' => array_keys(Ticket::distinct()->pluck('state', 'state')->toArray()) ?: [], // fallback
         ]);
     })->name('api.meta');
 });

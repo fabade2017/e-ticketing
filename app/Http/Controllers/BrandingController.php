@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BrandingLogo;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,28 +12,48 @@ class BrandingController extends Controller
 {
     public function index()
     {
-        if (!auth()->user()->hasRole('SuperAdmin')) abort(403);
-        $logoPath = SystemSetting::getValue('app_logo', null);
-        $logoUrl = null;
-        if ($logoPath) {
-            try {
-                $logoUrl = Storage::disk('public')->exists($logoPath) ? Storage::disk('public')->url($logoPath) : null;
-                if (!$logoUrl) $logoPath = null; // file missing (deploy wipe) — fallback to none
-            } catch (\Throwable $e) { $logoPath = null; }
+        if (! auth()->user()->hasRole('SuperAdmin')) {
+            abort(403);
         }
+
         return Inertia::render('Admin/Branding', [
             'branding' => [
                 'app_name' => SystemSetting::getValue('app_name', 'NA E-Ticket'),
                 'app_motto' => SystemSetting::getValue('app_motto', 'Secure • Offline-Capable • Nigerian Army'),
-                'app_logo' => $logoPath,
-                'logo_url' => $logoUrl,
+                'app_logo' => BrandingLogo::displayName(),
+                'logo_url' => BrandingLogo::url(),
             ],
         ]);
     }
 
+    /**
+     * Public endpoint that streams the stored logo. Serving from the database
+     * means the logo survives redeploys on ephemeral filesystems (Render).
+     */
+    public function logo()
+    {
+        $logo = BrandingLogo::current();
+        if (! $logo || $logo->contents() === '') {
+            abort(404);
+        }
+
+        $response = response($logo->contents(), 200, [
+            'Content-Type' => $logo->mime ?: 'image/png',
+            'Cache-Control' => 'public, max-age=604800',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+
+        // Prevent inline scripts if an SVG is opened directly.
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+
+        return $response;
+    }
+
     public function update(Request $request)
     {
-        if (!auth()->user()->hasRole('SuperAdmin')) abort(403);
+        if (! auth()->user()->hasRole('SuperAdmin')) {
+            abort(403);
+        }
         $request->validate([
             'app_name' => 'required|string|max:100',
             'app_motto' => 'required|string|max:200',
@@ -44,21 +65,27 @@ class BrandingController extends Controller
         SystemSetting::setValue('app_motto', $request->app_motto);
 
         if ($request->boolean('remove_logo')) {
-            $old = SystemSetting::getValue('app_logo');
-            if ($old) Storage::disk('public')->delete($old);
+            $this->deleteLegacyFile();
+            BrandingLogo::forget();
             SystemSetting::setValue('app_logo', '');
         } elseif ($request->hasFile('logo')) {
-            $old = SystemSetting::getValue('app_logo');
-            if ($old) Storage::disk('public')->delete($old);
-            // ensure branding dir exists and storage link is present
-            try { Storage::disk('public')->makeDirectory('branding'); } catch (\Throwable $e) {}
-            $path = $request->file('logo')->store('branding', 'public');
-            SystemSetting::setValue('app_logo', $path);
+            $this->deleteLegacyFile();
+            BrandingLogo::store($request->file('logo'));
+            SystemSetting::setValue('app_logo', 'branding/logo');
         }
 
-        // ensure storage symlink exists (Render/Docker ephemeral)
-        try { if (!is_link(public_path('storage')) && !is_dir(public_path('storage'))) \Illuminate\Support\Facades\Artisan::call('storage:link'); } catch (\Throwable $e) {}
+        return redirect()->route('admin.branding')->with('success', 'Branding updated — logo, name and motto now reflect instantly and the logo persists across deploys.');
+    }
 
-        return redirect()->route('admin.branding')->with('success', 'Branding updated — logo, name and motto will reflect instantly. If logo 404 after deploy, re-upload (Render local disk is ephemeral — consider S3 for persistence).');
+    private function deleteLegacyFile(): void
+    {
+        $old = SystemSetting::getValue('app_logo');
+        if ($old && $old !== 'branding/logo') {
+            try {
+                Storage::disk('public')->delete($old);
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
     }
 }
