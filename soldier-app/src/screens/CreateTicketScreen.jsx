@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal, Flat
 import client, { queueTicket } from '../api/client';
 import SyncButton from '../components/SyncButton';
 import { NIGERIA_STATES, STATES } from '../data/nigeria';
+import { COUNTRIES, DEFAULT_COUNTRY } from '../data/countries';
 
 const CATEGORIES = [
   { label: 'Welfare', value: 'welfare' },
@@ -47,9 +48,10 @@ function Dropdown({ label, value, placeholder, options, onSelect, disabled }) {
 }
 
 export default function CreateTicketScreen({ navigation }) {
-  const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', country:'Nigeria', state:'', lga:'', location:'' });
+  const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', country: DEFAULT_COUNTRY, state:'', lga:'', location:'' });
   const [saving, setSaving] = useState(false);
-  const lgaOptions = form.state ? (NIGERIA_STATES[form.state] || []).map(l=>({ label:l, value:l })) : [];
+  const isNigeria = form.country === 'Nigeria';
+  const lgaOptions = (isNigeria && form.state) ? (NIGERIA_STATES[form.state] || []).map(l=>({ label:l, value:l })) : [];
 
   const submit = async () => {
     if (!form.title || !form.description || !form.state || !form.lga) {
@@ -87,10 +89,14 @@ export default function CreateTicketScreen({ navigation }) {
       </View>
 
       <View style={{ flexDirection:'row', gap:10 }}>
-        <Dropdown label="Country" value={form.country} placeholder="Nigeria" options={[{ label:'Nigeria', value:'Nigeria' }]} onSelect={v=>setForm({...form, country:v})} />
-        <Dropdown label="State" value={form.state} placeholder="Select State" options={STATES.map(s=>({ label:s, value:s }))} onSelect={v=>setForm({...form, state:v, lga:''})} />
+        <Dropdown label="Country" value={form.country} placeholder="Select Country" options={COUNTRIES.map(c=>({ label:c, value:c }))} onSelect={v=>setForm({...form, country:v, state:'', lga:''})} />
+        {isNigeria
+          ? <Dropdown label="State" value={form.state} placeholder="Select State" options={STATES.map(s=>({ label:s, value:s }))} onSelect={v=>setForm({...form, state:v, lga:''})} />
+          : <View style={{ flex:1 }}><Text style={s.label}>State</Text><TextInput style={s.input} value={form.state} onChangeText={v=>setForm({...form, state:v})} placeholder="State / Province / Region" /></View>}
       </View>
-      <Dropdown label="LGA" value={form.lga} placeholder={form.state ? 'Select LGA' : 'Pick state first'} options={lgaOptions} onSelect={v=>setForm({...form, lga:v})} disabled={!form.state} />
+      {isNigeria
+        ? <Dropdown label="LGA" value={form.lga} placeholder={form.state ? 'Select LGA' : 'Pick state first'} options={lgaOptions} onSelect={v=>setForm({...form, lga:v})} disabled={!form.state} />
+        : <View><Text style={s.label}>LGA</Text><TextInput style={s.input} value={form.lga} onChangeText={v=>setForm({...form, lga:v})} placeholder="LGA / District / City" /></View>}
 
       <Text style={s.label}>Location / Outpost detail</Text>
       <TextInput style={s.input} value={form.location} onChangeText={v=>setForm({...form, location:v})} placeholder="e.g. Sector 2, Borno — detailed post" />
@@ -100,7 +106,7 @@ export default function CreateTicketScreen({ navigation }) {
 
       <TouchableOpacity style={s.btn} onPress={submit} disabled={saving}><Text style={s.btnTxt}>{saving?'Submitting...':'Submit Ticket'}</Text></TouchableOpacity>
       <SyncButton style={[s.btn, { backgroundColor:'#334155', marginTop:8 }]} textStyle={s.btnTxt} />
-      <Text style={s.note}>State/LGA dropdowns are identical to web at resources/js/Pages/Tickets/Create.jsx:37 • Country locked to Nigeria</Text>
+      <Text style={s.note}>Country list shared with the web app • Nigerian State/LGA dropdowns appear when Country = Nigeria, otherwise State/LGA are free text.</Text>
     </ScrollView>
   );
 }

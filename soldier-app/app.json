@@ -23,8 +23,8 @@
     "android": {
       "package": "ng.mil.na.eticket.soldier",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#0b3d0b"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
       "permissions": [
         "CAMERA",

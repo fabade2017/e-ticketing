@@ -62,7 +62,7 @@ class TicketController extends Controller
             'category' => 'required|in:welfare,logistics,medical,equipment,operations,other',
             'priority' => 'required|in:low,medium,high,urgent',
             'location' => 'nullable|string|max:255',
-            'country' => 'required|string|in:Nigeria',
+            'country' => 'required|string|max:100',
             'state' => 'required|string',
             'lga' => 'required|string',
             'offline_created' => 'nullable|boolean',
