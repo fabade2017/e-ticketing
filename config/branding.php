@@ -6,5 +6,5 @@ return [
     'app_motto' => env('BRANDING_APP_MOTTO', 'Secure • Offline-Capable • Nigerian Army'),
 
     // Expo EAS build page for the soldier APK.
-    'download_url' => env('BRANDING_DOWNLOAD_URL', 'https://expo.dev/accounts/adetone007/projects/na-soldier-app/builds/07fdfb84-2634-4576-905b-595c879b8825'),
+    'download_url' => env('BRANDING_DOWNLOAD_URL', 'https://expo.dev/accounts/adetone007/projects/na-soldier-app/builds/7a1f448a-1b35-4d76-9547-1eb6c62e6591'),
 ];
