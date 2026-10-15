@@ -18,8 +18,8 @@ class TicketController extends Controller
         $query = Ticket::with(['user:id,name,rank,service_number', 'assignee:id,name,rank', 'department:id,name'])
             ->latest();
 
-        $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
-        if (!$isAll) {
+        $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support']);
+        if (! $isAll) {
             $query->visibleTo($user);
         } else {
             // scope=all explicit, still allow additional unit/department filter as intersection
@@ -36,7 +36,7 @@ class TicketController extends Controller
         }
         if ($request->search) {
             $s = $request->search;
-            $query->where(fn($q) => $q->where('title', 'like', "%{$s}%")->orWhere('ticket_number', 'like', "%{$s}%"));
+            $query->where(fn ($q) => $q->where('title', 'like', "%{$s}%")->orWhere('ticket_number', 'like', "%{$s}%"));
         }
         if ($request->filter === 'overdue') {
             $query->where('sla_due_at', '<', now())->whereNotIn('status', ['resolved', 'closed']);
@@ -66,7 +66,26 @@ class TicketController extends Controller
             'state' => 'required|string',
             'lga' => 'required|string',
             'offline_created' => 'nullable|boolean',
+            'client_uuid' => 'nullable|uuid',
         ]);
+
+        // Idempotent offline sync: a queued ticket re-sent with the same client_uuid
+        // must not create a duplicate row.
+        if (! empty($validated['client_uuid'])) {
+            $existing = Ticket::where('client_uuid', $validated['client_uuid'])
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if ($existing) {
+                $existing->load(['user:id,name,rank,service_number', 'department:id,name']);
+
+                return response()->json([
+                    'message' => "Ticket {$existing->ticket_number} already synced",
+                    'ticket' => $existing,
+                    'duplicate' => true,
+                ], 200);
+            }
+        }
 
         $validated['user_id'] = $request->user()->id;
         $validated['unit'] = $request->user()->unit;
@@ -85,7 +104,7 @@ class TicketController extends Controller
         ]);
 
         return response()->json([
-            'message' => "Ticket {$ticket->ticket_number} created — SLA " . Ticket::SLA_HOURS[$ticket->priority] . "h",
+            'message' => "Ticket {$ticket->ticket_number} created — SLA ".Ticket::SLA_HOURS[$ticket->priority].'h',
             'ticket' => $ticket,
         ], 201);
     }
@@ -110,7 +129,7 @@ class TicketController extends Controller
      */
     public function update(Request $request, Ticket $ticket)
     {
-        if (!$request->user()->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) {
+        if (! $request->user()->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -153,8 +172,8 @@ class TicketController extends Controller
     {
         $user = $request->user();
         $query = Ticket::query();
-        $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin','Admin','Support']);
-        if (!$isAll) {
+        $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support']);
+        if (! $isAll) {
             $query->visibleTo($user);
         }
 
@@ -171,9 +190,13 @@ class TicketController extends Controller
 
     private function authorizeAccess($user, Ticket $ticket): void
     {
-        if ($user->hasRole('SuperAdmin')) return;
-        if ($user->hasAnyRole(['Admin','Support'])) {
-            if (Ticket::where('id',$ticket->id)->visibleTo($user)->exists()) return;
+        if ($user->hasRole('SuperAdmin')) {
+            return;
+        }
+        if ($user->hasAnyRole(['Admin', 'Support'])) {
+            if (Ticket::where('id', $ticket->id)->visibleTo($user)->exists()) {
+                return;
+            }
             abort(403, 'Ticket not in your scope');
         }
         if ($ticket->user_id !== $user->id) {

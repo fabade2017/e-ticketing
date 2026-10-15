@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal, FlatList, StyleSheet } from 'react-native';
-import client, { queueTicket, syncQueue } from '../api/client';
+import client, { queueTicket } from '../api/client';
+import SyncButton from '../components/SyncButton';
 import { NIGERIA_STATES, STATES } from '../data/nigeria';
 
 const CATEGORIES = [
@@ -72,11 +73,6 @@ export default function CreateTicketScreen({ navigation }) {
     } finally { setSaving(false); }
   };
 
-  const sync = async () => {
-    const r = await syncQueue();
-    Alert.alert('Sync', `Synced ${r.synced}, remaining ${r.remaining}`);
-  };
-
   return (
     <ScrollView style={s.container} contentContainerStyle={{ padding:16, paddingBottom: 40 }}>
       <Text style={s.h1}>Create Ticket</Text>
@@ -103,7 +99,7 @@ export default function CreateTicketScreen({ navigation }) {
       <TextInput style={[s.input, { height:120, textAlignVertical:'top' }]} value={form.description} onChangeText={v=>setForm({...form, description:v})} multiline placeholder="Describe issue..." />
 
       <TouchableOpacity style={s.btn} onPress={submit} disabled={saving}><Text style={s.btnTxt}>{saving?'Submitting...':'Submit Ticket'}</Text></TouchableOpacity>
-      <TouchableOpacity style={[s.btn, { backgroundColor:'#334155', marginTop:8 }]} onPress={sync}><Text style={s.btnTxt}>Sync Offline Queue</Text></TouchableOpacity>
+      <SyncButton style={[s.btn, { backgroundColor:'#334155', marginTop:8 }]} textStyle={s.btnTxt} />
       <Text style={s.note}>State/LGA dropdowns are identical to web at resources/js/Pages/Tickets/Create.jsx:37 • Country locked to Nigeria</Text>
     </ScrollView>
   );
