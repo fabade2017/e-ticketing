@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -77,5 +78,51 @@ class ApiTicketSyncTest extends TestCase
         $this->postJson('/api/tickets', $this->payload('not-a-uuid'))
             ->assertStatus(422)
             ->assertJsonValidationErrors('client_uuid');
+    }
+
+    public function test_ticket_uses_selected_department_over_user_default(): void
+    {
+        $soldier = User::where('email', 'soldier@army.mil.ng')->first();
+        $home = Department::create(['name' => 'Logistics', 'code' => 'LOG']);
+        $other = Department::create(['name' => 'Medical', 'code' => 'MED']);
+        $soldier->update(['department_id' => $home->id]);
+        Sanctum::actingAs($soldier);
+
+        $payload = $this->payload('');
+        unset($payload['client_uuid']);
+        $payload['department_id'] = $other->id;
+
+        $response = $this->postJson('/api/tickets', $payload)->assertStatus(201);
+
+        $this->assertSame($other->id, $response->json('ticket.department_id'));
+    }
+
+    public function test_ticket_department_defaults_to_users_own_department(): void
+    {
+        $soldier = User::where('email', 'soldier@army.mil.ng')->first();
+        $home = Department::create(['name' => 'Logistics', 'code' => 'LOG']);
+        $soldier->update(['department_id' => $home->id]);
+        Sanctum::actingAs($soldier);
+
+        $payload = $this->payload('');
+        unset($payload['client_uuid']);
+
+        $response = $this->postJson('/api/tickets', $payload)->assertStatus(201);
+
+        $this->assertSame($home->id, $response->json('ticket.department_id'));
+    }
+
+    public function test_ticket_rejects_unknown_department(): void
+    {
+        $soldier = User::where('email', 'soldier@army.mil.ng')->first();
+        Sanctum::actingAs($soldier);
+
+        $payload = $this->payload('');
+        unset($payload['client_uuid']);
+        $payload['department_id'] = 9999;
+
+        $this->postJson('/api/tickets', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('department_id');
     }
 }

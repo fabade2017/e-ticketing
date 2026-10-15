@@ -4,8 +4,8 @@ import Layout from '../../Components/Layout';
 import { NIGERIA_STATES, STATES } from '../../data/nigeria';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../data/countries';
 
-export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({ title: '', description: '', category: 'other', priority: 'medium', location: '', country: DEFAULT_COUNTRY, state: '', lga: '' });
+export default function Create({ departments, defaultDepartmentId }) {
+    const { data, setData, post, processing, errors } = useForm({ title: '', description: '', category: 'other', priority: 'medium', location: '', department_id: defaultDepartmentId || '', country: DEFAULT_COUNTRY, state: '', lga: '' });
     const [lgaOptions, setLgaOptions] = useState([]);
     const isNigeria = data.country === 'Nigeria';
 
@@ -40,8 +40,11 @@ export default function Create() {
             <p className="text-sm text-slate-500">For border/remote areas: form queues offline and syncs automatically.</p>
             <form onSubmit={submit} className="bg-white border rounded-xl p-6 mt-6 space-y-4 max-w-2xl">
                 <div><label className="text-sm font-medium">Title</label><input value={data.title} onChange={e=>setData('title', e.target.value)} className="w-full border rounded px-3 py-2 mt-1" />{errors.title && <p className="text-red-600 text-xs">{errors.title}</p>}</div>
-                <div><label className="text-sm font-medium">Category</label><select value={data.category} onChange={e=>setData('category', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="welfare">Welfare</option><option value="logistics">Logistics</option><option value="medical">Medical</option><option value="equipment">Equipment</option><option value="operations">Operations</option><option value="other">Other</option></select></div>
-                <div><label className="text-sm font-medium">Priority</label><select value={data.priority} onChange={e=>setData('priority', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+                <div className="grid md:grid-cols-3 gap-3">
+                    <div><label className="text-sm font-medium">Category</label><select value={data.category} onChange={e=>setData('category', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="welfare">Welfare</option><option value="logistics">Logistics</option><option value="medical">Medical</option><option value="equipment">Equipment</option><option value="operations">Operations</option><option value="other">Other</option></select></div>
+                    <div><label className="text-sm font-medium">Department</label><select value={data.department_id} onChange={e=>setData('department_id', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="">Select Department</option>{Object.entries(departments || {}).map(([id,name])=> <option key={id} value={id}>{name}</option>)}</select>{errors.department_id && <p className="text-red-600 text-xs">{errors.department_id}</p>}</div>
+                    <div><label className="text-sm font-medium">Priority</label><select value={data.priority} onChange={e=>setData('priority', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+                </div>
                 <div className="grid md:grid-cols-3 gap-3">
                     <div><label className="text-sm font-medium">Country</label><select value={data.country} onChange={e=>onCountryChange(e.target.value)} className="w-full border rounded px-3 py-2 mt-1">{COUNTRIES.map(c=> <option key={c} value={c}>{c}</option>)}</select></div>
                     <div><label className="text-sm font-medium">State</label>{isNigeria

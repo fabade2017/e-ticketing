@@ -79,7 +79,10 @@ class TicketController extends Controller
 
     public function create()
     {
-        return Inertia::render('Tickets/Create');
+        return Inertia::render('Tickets/Create', [
+            'departments' => Department::pluck('name', 'id'),
+            'defaultDepartmentId' => auth()->user()->department_id,
+        ]);
     }
 
     public function store(Request $request)
@@ -93,11 +96,12 @@ class TicketController extends Controller
             'country' => 'required|string|max:100',
             'state' => 'required|string',
             'lga' => 'required|string',
+            'department_id' => 'nullable|exists:departments,id',
             'offline_created' => 'boolean',
         ]);
         $validated['user_id'] = auth()->id();
         $validated['unit'] = auth()->user()->unit;
-        $validated['department_id'] = auth()->user()->department_id;
+        $validated['department_id'] = $request->input('department_id') ?: auth()->user()->department_id;
 
         $ticket = Ticket::create($validated);
         TicketHistory::create(['ticket_id' => $ticket->id, 'user_id' => auth()->id(), 'action' => 'created', 'to' => ['title' => $ticket->title, 'priority' => $ticket->priority], 'ip' => $request->ip()]);

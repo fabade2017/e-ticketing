@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal, FlatList, StyleSheet } from 'react-native';
-import client, { queueTicket } from '../api/client';
+import client, { queueTicket, getMeta } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import SyncButton from '../components/SyncButton';
 import { NIGERIA_STATES, STATES } from '../data/nigeria';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../data/countries';
@@ -48,10 +49,20 @@ function Dropdown({ label, value, placeholder, options, onSelect, disabled }) {
 }
 
 export default function CreateTicketScreen({ navigation }) {
-  const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', country: DEFAULT_COUNTRY, state:'', lga:'', location:'' });
+  const { user } = useAuth();
+  const [departments, setDepartments] = useState([]);
+  const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', department_id: user?.department_id || '', country: DEFAULT_COUNTRY, state:'', lga:'', location:'' });
   const [saving, setSaving] = useState(false);
   const isNigeria = form.country === 'Nigeria';
   const lgaOptions = (isNigeria && form.state) ? (NIGERIA_STATES[form.state] || []).map(l=>({ label:l, value:l })) : [];
+
+  useEffect(() => {
+    getMeta().then(m => setDepartments(m.departments || [])).catch(()=>{});
+  }, []);
+
+  useEffect(() => {
+    if (!form.department_id && user?.department_id) setForm(f => ({ ...f, department_id: user.department_id }));
+  }, [user]);
 
   const submit = async () => {
     if (!form.title || !form.description || !form.state || !form.lga) {
@@ -86,6 +97,10 @@ export default function CreateTicketScreen({ navigation }) {
       <View style={{ flexDirection:'row', gap:10 }}>
         <Dropdown label="Category" value={form.category} placeholder="Select Category" options={CATEGORIES} onSelect={v=>setForm({...form, category:v})} />
         <Dropdown label="Priority" value={form.priority} placeholder="Select Priority" options={PRIORITIES} onSelect={v=>setForm({...form, priority:v})} />
+      </View>
+
+      <View style={{ flexDirection:'row', gap:10 }}>
+        <Dropdown label="Department" value={form.department_id} placeholder="Select Department" options={departments.map(d=>({ label:d.name, value:d.id }))} onSelect={v=>setForm({...form, department_id:v})} />
       </View>
 
       <View style={{ flexDirection:'row', gap:10 }}>

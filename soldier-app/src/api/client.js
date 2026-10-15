@@ -111,6 +111,19 @@ export async function clearCachedUser() { await AsyncStorage.removeItem(USER_KEY
 
 export function isNetworkError(e) { return !e?.response; }
 
+// --- Server-driven dropdown metadata (categories, departments, ...) with offline cache ---
+const META_KEY = 'na_meta_cache';
+export async function getMeta() {
+  try {
+    const { data } = await client.get('/meta', { __silent: true });
+    await AsyncStorage.setItem(META_KEY, JSON.stringify(data));
+    return data;
+  } catch {
+    const cached = await AsyncStorage.getItem(META_KEY);
+    return cached ? JSON.parse(cached) : { departments: [] };
+  }
+}
+
 let showLoader = null;
 let hideLoader = null;
 export function bindLoading(show, hide) { showLoader = show; hideLoader = hide; }

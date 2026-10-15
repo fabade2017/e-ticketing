@@ -65,6 +65,7 @@ class TicketController extends Controller
             'country' => 'required|string|max:100',
             'state' => 'required|string',
             'lga' => 'required|string',
+            'department_id' => 'nullable|exists:departments,id',
             'offline_created' => 'nullable|boolean',
             'client_uuid' => 'nullable|uuid',
         ]);
@@ -89,7 +90,7 @@ class TicketController extends Controller
 
         $validated['user_id'] = $request->user()->id;
         $validated['unit'] = $request->user()->unit;
-        $validated['department_id'] = $request->user()->department_id;
+        $validated['department_id'] = $request->input('department_id') ?: $request->user()->department_id;
         $validated['offline_created'] = $request->boolean('offline_created');
 
         $ticket = Ticket::create($validated);
