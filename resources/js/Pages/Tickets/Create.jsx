@@ -5,7 +5,7 @@ import { NIGERIA_STATES, STATES } from '../../data/nigeria';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../data/countries';
 
 export default function Create({ departments, defaultDepartmentId }) {
-    const { data, setData, post, processing, errors } = useForm({ title: '', description: '', category: 'other', priority: 'medium', location: '', department_id: defaultDepartmentId || '', country: DEFAULT_COUNTRY, state: '', lga: '' });
+    const { data, setData, post, processing, errors } = useForm({ title: '', description: '', category: 'other', priority: 'medium', location: '', department_id: defaultDepartmentId || '', country: DEFAULT_COUNTRY, state: '', lga: '', is_anonymous: false });
     const [lgaOptions, setLgaOptions] = useState([]);
     const isNigeria = data.country === 'Nigeria';
 
@@ -39,6 +39,25 @@ export default function Create({ departments, defaultDepartmentId }) {
             <h1 className="text-2xl font-bold">Create Ticket</h1>
             <p className="text-sm text-slate-500">For border/remote areas: form queues offline and syncs automatically.</p>
             <form onSubmit={submit} className="bg-white border rounded-xl p-6 mt-6 space-y-4 max-w-2xl">
+                <div className={`flex items-center justify-between gap-3 border rounded-lg p-3 ${data.is_anonymous ? 'bg-amber-50 border-amber-300' : 'bg-slate-50'}`}>
+                    <div>
+                        <p className="text-sm font-semibold">Anonymous submission</p>
+                        <p className="text-xs text-slate-500">Submit without attaching your name, service number, unit or IP address.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={()=>setData('is_anonymous', !data.is_anonymous)}
+                        aria-pressed={data.is_anonymous}
+                        className={`px-4 py-2 rounded font-semibold whitespace-nowrap ${data.is_anonymous ? 'bg-amber-600 text-white' : 'bg-white border text-slate-700'}`}
+                    >
+                        {data.is_anonymous ? 'Anonymous: ON' : 'Anonymous'}
+                    </button>
+                </div>
+                {data.is_anonymous && (
+                    <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-3">
+                        This ticket will not be tracked to you. It will still appear in your ticket list on this browser, but the audit trail will show “Anonymous”.
+                    </p>
+                )}
                 <div><label className="text-sm font-medium">Title</label><input value={data.title} onChange={e=>setData('title', e.target.value)} className="w-full border rounded px-3 py-2 mt-1" />{errors.title && <p className="text-red-600 text-xs">{errors.title}</p>}</div>
                 <div className="grid md:grid-cols-3 gap-3">
                     <div><label className="text-sm font-medium">Category</label><select value={data.category} onChange={e=>setData('category', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="welfare">Welfare</option><option value="logistics">Logistics</option><option value="medical">Medical</option><option value="equipment">Equipment</option><option value="operations">Operations</option><option value="other">Other</option></select></div>
@@ -56,7 +75,9 @@ export default function Create({ departments, defaultDepartmentId }) {
                 </div>
                 <div><label className="text-sm font-medium">Location / Outpost (detail)</label><input value={data.location} onChange={e=>setData('location', e.target.value)} placeholder="e.g. Sector 2, Borno — detailed post" className="w-full border rounded px-3 py-2 mt-1" /></div>
                 <div><label className="text-sm font-medium">Description</label><textarea value={data.description} onChange={e=>setData('description', e.target.value)} rows={5} className="w-full border rounded px-3 py-2 mt-1" />{errors.description && <p className="text-red-600 text-xs">{errors.description}</p>}</div>
-                <button disabled={processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">{navigator.onLine ? 'Submit Ticket' : 'Queue Offline'}</button>
+                <button disabled={processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">
+                    {!navigator.onLine ? 'Queue Offline' : data.is_anonymous ? 'Submit Anonymously' : 'Submit Ticket'}
+                </button>
             </form>
         </Layout>
     );

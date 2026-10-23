@@ -3,6 +3,7 @@ import client, {
   getToken, setToken, clearToken,
   isNetworkError, setCachedUser, getCachedUser, clearCachedUser,
   hasOfflinePin, setOfflinePin, verifyOfflinePin, clearOfflinePin,
+  clearAnonymousTokens,
 } from '../api/client';
 
 const AuthContext = createContext(null);
@@ -88,6 +89,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try { await client.post('/logout'); } catch {}
     await clearToken();
+    await clearAnonymousTokens();
     setUser(null);
     setOffline(false);
   };

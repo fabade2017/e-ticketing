@@ -101,6 +101,32 @@ export async function verifyOfflinePin(pin) {
   return { ok: false, attemptsLeft: MAX_PIN_ATTEMPTS - fails };
 }
 
+// --- Anonymous ticket tokens ---
+// The server never links an anonymous ticket to a user. These random tokens are
+// kept on this device only so the submitter can still see their own anonymous
+// tickets; they are sent via X-Anonymous-Tokens on ticket requests.
+const ANON_TOKENS_KEY = 'na_anonymous_tokens';
+export async function getAnonymousTokens() {
+  try {
+    const raw = await secureGet(ANON_TOKENS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter(t => typeof t === 'string' && t.length === 64) : [];
+  } catch {
+    return [];
+  }
+}
+export async function addAnonymousToken(token) {
+  if (!token || typeof token !== 'string') return;
+  const list = await getAnonymousTokens();
+  if (!list.includes(token)) {
+    list.push(token);
+    await secureSet(ANON_TOKENS_KEY, JSON.stringify(list.slice(-100)));
+  }
+}
+export async function clearAnonymousTokens() {
+  await secureDelete(ANON_TOKENS_KEY);
+}
+
 // --- Cached profile so a PIN login works with no network ---
 const USER_KEY = 'na_cached_user';
 export async function setCachedUser(user) { await AsyncStorage.setItem(USER_KEY, JSON.stringify(user)); }
@@ -131,6 +157,8 @@ export function bindLoading(show, hide) { showLoader = show; hideLoader = hide; 
 client.interceptors.request.use(async (config) => {
   const token = await getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const anonymousTokens = await getAnonymousTokens();
+  if (anonymousTokens.length) config.headers['X-Anonymous-Tokens'] = anonymousTokens.join(',');
   // show rolling blocker for every network op (auto-hides on response)
   if (!config.__silent && showLoader) showLoader(config.__loadingMsg || 'Processing, please wait...');
   return config;
@@ -162,7 +190,8 @@ export async function syncQueue() {
   const remaining = [];
   for (const t of q) {
     try {
-      await client.post('/tickets', t, { __silent: true });
+      const res = await client.post('/tickets', t, { __silent: true });
+      if (res.data?.anonymous_token) await addAnonymousToken(res.data.anonymous_token);
       synced++;
     } catch (e) {
       // keep 4xx validation errors for manual fix, retry only network errors

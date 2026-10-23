@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class TicketController extends Controller
 {
@@ -20,7 +21,7 @@ class TicketController extends Controller
 
         $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support']);
         if (! $isAll) {
-            $query->visibleTo($user);
+            $query->visibleTo($user, false, $this->anonymousTokens($request));
         } else {
             // scope=all explicit, still allow additional unit/department filter as intersection
         }
@@ -67,14 +68,22 @@ class TicketController extends Controller
             'lga' => 'required|string',
             'department_id' => 'nullable|exists:departments,id',
             'offline_created' => 'nullable|boolean',
+            'is_anonymous' => 'nullable|boolean',
             'client_uuid' => 'nullable|uuid',
         ]);
 
+        $isAnonymous = $request->boolean('is_anonymous');
+
         // Idempotent offline sync: a queued ticket re-sent with the same client_uuid
-        // must not create a duplicate row.
+        // must not create a duplicate row. Anonymous tickets have no user_id, so we
+        // de-duplicate them by client_uuid alone.
         if (! empty($validated['client_uuid'])) {
             $existing = Ticket::where('client_uuid', $validated['client_uuid'])
-                ->where('user_id', $request->user()->id)
+                ->when(
+                    $isAnonymous,
+                    fn ($q) => $q->where('is_anonymous', true),
+                    fn ($q) => $q->where('user_id', $request->user()->id)
+                )
                 ->first();
 
             if ($existing) {
@@ -84,12 +93,16 @@ class TicketController extends Controller
                     'message' => "Ticket {$existing->ticket_number} already synced",
                     'ticket' => $existing,
                     'duplicate' => true,
+                    'anonymous_token' => $existing->is_anonymous ? $existing->anonymous_token : null,
                 ], 200);
             }
         }
 
-        $validated['user_id'] = $request->user()->id;
-        $validated['unit'] = $request->user()->unit;
+        $anonymousToken = $isAnonymous ? Str::random(64) : null;
+        $validated['user_id'] = $isAnonymous ? null : $request->user()->id;
+        $validated['unit'] = $isAnonymous ? null : $request->user()->unit;
+        $validated['is_anonymous'] = $isAnonymous;
+        $validated['anonymous_token'] = $anonymousToken;
         $validated['department_id'] = $request->input('department_id') ?: $request->user()->department_id;
         $validated['offline_created'] = $request->boolean('offline_created');
 
@@ -98,15 +111,21 @@ class TicketController extends Controller
 
         TicketHistory::create([
             'ticket_id' => $ticket->id,
-            'user_id' => $request->user()->id,
+            'user_id' => $isAnonymous ? null : $request->user()->id,
             'action' => 'created',
             'to' => ['title' => $ticket->title, 'priority' => $ticket->priority],
-            'ip' => $request->ip(),
+            'ip' => $isAnonymous ? null : $request->ip(),
+            'note' => $isAnonymous ? 'Submitted anonymously' : null,
         ]);
 
+        $message = $isAnonymous
+            ? "Anonymous ticket {$ticket->ticket_number} created — it is not linked to your account, but it will appear in your ticket list."
+            : "Ticket {$ticket->ticket_number} created — SLA ".Ticket::SLA_HOURS[$ticket->priority].'h';
+
         return response()->json([
-            'message' => "Ticket {$ticket->ticket_number} created — SLA ".Ticket::SLA_HOURS[$ticket->priority].'h',
+            'message' => $message,
             'ticket' => $ticket,
+            'anonymous_token' => $anonymousToken,
         ], 201);
     }
 
@@ -115,7 +134,7 @@ class TicketController extends Controller
      */
     public function show(Request $request, Ticket $ticket)
     {
-        $this->authorizeAccess($request->user(), $ticket);
+        $this->authorizeAccess($request->user(), $ticket, $this->anonymousTokens($request));
 
         $ticket->load(['user:id,name,rank,service_number,unit', 'assignee:id,name,rank', 'department:id,name', 'histories.user:id,name,rank']);
 
@@ -175,7 +194,7 @@ class TicketController extends Controller
         $query = Ticket::query();
         $isAll = $request->input('scope') === 'all' && $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support']);
         if (! $isAll) {
-            $query->visibleTo($user);
+            $query->visibleTo($user, false, $this->anonymousTokens($request));
         }
 
         return response()->json([
@@ -189,19 +208,34 @@ class TicketController extends Controller
         ]);
     }
 
-    private function authorizeAccess($user, Ticket $ticket): void
+    private function authorizeAccess($user, Ticket $ticket, array $anonymousTokens = []): void
     {
         if ($user->hasRole('SuperAdmin')) {
             return;
         }
         if ($user->hasAnyRole(['Admin', 'Support'])) {
-            if (Ticket::where('id', $ticket->id)->visibleTo($user)->exists()) {
+            if (Ticket::where('id', $ticket->id)->visibleTo($user, false, $anonymousTokens)->exists()) {
                 return;
             }
             abort(403, 'Ticket not in your scope');
         }
         if ($ticket->user_id !== $user->id) {
-            abort(403, 'You can only view your own tickets');
+            if (! $ticket->anonymous_token || ! in_array($ticket->anonymous_token, $anonymousTokens, true)) {
+                abort(403, 'You can only view your own tickets');
+            }
         }
+    }
+
+    private function anonymousTokens(Request $request): array
+    {
+        $header = (string) $request->header('X-Anonymous-Tokens', '');
+        if ($header === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map('trim', explode(',', $header)),
+            fn ($token) => is_string($token) && strlen($token) === 64
+        ));
     }
 }

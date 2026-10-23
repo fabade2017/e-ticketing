@@ -19,6 +19,7 @@ export default function TicketDetailScreen({ route }) {
       <Text style={s.title}>{ticket.title}</Text>
       <View style={s.row}><Text style={s.badge}>{ticket.status}</Text><Text style={s.badge}>{ticket.priority} • {ticket.category}</Text></View>
       <Text style={s.meta}>{ticket.state} / {ticket.lga} • {ticket.location || '—'} • {ticket.department?.name || 'No dept'}</Text>
+      {ticket.is_anonymous && <Text style={s.meta}>Raised by: Anonymous — no identity attached</Text>}
       <Text style={s.desc}>{ticket.description}</Text>
 
       {ticket.escalated_at && <Text style={s.warn}>⚠ Escalated: {new Date(ticket.escalated_at).toLocaleString()} (overdue SLA)</Text>}
@@ -27,8 +28,8 @@ export default function TicketDetailScreen({ route }) {
       <Text style={s.h2}>History</Text>
       {histories.map(h=> (
         <View key={h.id} style={s.hist}>
-          <Text style={s.histAction}>{h.action} • {h.user?.rank} {h.user?.name}</Text>
-          <Text style={s.histMeta}>{new Date(h.created_at).toLocaleString()} • {h.ip}</Text>
+          <Text style={s.histAction}>{h.action} • {h.user ? `${h.user.rank || ''} ${h.user.name || ''}`.trim() : (h.action === 'created' && ticket.is_anonymous ? 'Anonymous' : 'System')}</Text>
+          <Text style={s.histMeta}>{new Date(h.created_at).toLocaleString()}{h.ip ? ` • ${h.ip}` : ''}</Text>
         </View>
       ))}
       {histories.length===0 && <Text style={s.meta}>No history yet</Text>}

@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -19,8 +20,9 @@ class TicketController extends Controller
         // RBAC: default is per-user scoped. ?scope=all allows privileged to see everything.
         $scopeParam = $request->input('scope');
         $isAll = $scopeParam === 'all' && $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support']);
+        $anonymousTokens = $this->anonymousTokens($request);
         if (! $isAll) {
-            $query->visibleTo($user);
+            $query->visibleTo($user, false, $anonymousTokens);
         }
         // legacy explicit filters still apply (intersect with visible scope)
         if ($request->scope === 'unit' && $user->unit) {
@@ -31,7 +33,12 @@ class TicketController extends Controller
         }
         // additional filter param ?view=unit|department|mine for toggle UI
         if ($request->input('view') === 'mine') {
-            $query = Ticket::with(['user', 'assignee', 'department'])->where('user_id', $user->id)->latest();
+            $query = Ticket::with(['user', 'assignee', 'department'])->where(function ($q) use ($user, $anonymousTokens) {
+                $q->where('user_id', $user->id);
+                if ($anonymousTokens) {
+                    $q->orWhereIn('anonymous_token', $anonymousTokens);
+                }
+            })->latest();
             if ($request->status) {
                 $query->where('status', $request->status);
             }
@@ -98,20 +105,43 @@ class TicketController extends Controller
             'lga' => 'required|string',
             'department_id' => 'nullable|exists:departments,id',
             'offline_created' => 'boolean',
+            'is_anonymous' => 'boolean',
         ]);
-        $validated['user_id'] = auth()->id();
-        $validated['unit'] = auth()->user()->unit;
+
+        $isAnonymous = $request->boolean('is_anonymous');
+        $anonymousToken = $isAnonymous ? Str::random(64) : null;
+        $validated['user_id'] = $isAnonymous ? null : auth()->id();
+        $validated['unit'] = $isAnonymous ? null : auth()->user()->unit;
+        $validated['is_anonymous'] = $isAnonymous;
+        $validated['anonymous_token'] = $anonymousToken;
         $validated['department_id'] = $request->input('department_id') ?: auth()->user()->department_id;
 
         $ticket = Ticket::create($validated);
-        TicketHistory::create(['ticket_id' => $ticket->id, 'user_id' => auth()->id(), 'action' => 'created', 'to' => ['title' => $ticket->title, 'priority' => $ticket->priority], 'ip' => $request->ip()]);
 
-        return redirect()->route('tickets.index')->with('success', "Ticket {$ticket->ticket_number} created — SLA ".Ticket::SLA_HOURS[$ticket->priority].'h');
+        if ($isAnonymous) {
+            $tokens = $this->anonymousTokens($request);
+            $tokens[] = $anonymousToken;
+            $request->session()->put('anonymous_ticket_tokens', array_slice(array_values(array_unique($tokens)), -100));
+        }
+        TicketHistory::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $isAnonymous ? null : auth()->id(),
+            'action' => 'created',
+            'to' => ['title' => $ticket->title, 'priority' => $ticket->priority],
+            'ip' => $isAnonymous ? null : $request->ip(),
+            'note' => $isAnonymous ? 'Submitted anonymously' : null,
+        ]);
+
+        $message = $isAnonymous
+            ? "Anonymous ticket {$ticket->ticket_number} created — it is not linked to your account, but it will appear in your ticket list."
+            : "Ticket {$ticket->ticket_number} created — SLA ".Ticket::SLA_HOURS[$ticket->priority].'h';
+
+        return redirect()->route('tickets.index')->with('success', $message);
     }
 
-    public function show(Ticket $ticket)
+    public function show(Request $request, Ticket $ticket)
     {
-        $this->authorizeAccess($ticket);
+        $this->authorizeAccess($ticket, $this->anonymousTokens($request));
 
         return Inertia::render('Tickets/Show', [
             'ticket' => $ticket->load(['user', 'assignee', 'department', 'histories.user']),
@@ -149,22 +179,31 @@ class TicketController extends Controller
         return back()->with('success', 'Ticket updated');
     }
 
-    private function authorizeAccess(Ticket $ticket): void
+    private function authorizeAccess(Ticket $ticket, array $anonymousTokens = []): void
     {
         $user = auth()->user();
         if ($user->hasRole('SuperAdmin')) {
             return;
         }
-        // Admin/Support can access if ticket is visible to them (department/unit/assigned/own)
+        // Admin/Support can access if ticket is visible to them (department/unit/assigned/own/anonymous)
         if ($user->hasAnyRole(['Admin', 'Support'])) {
-            $visible = Ticket::where('id', $ticket->id)->visibleTo($user)->exists();
+            $visible = Ticket::where('id', $ticket->id)->visibleTo($user, false, $anonymousTokens)->exists();
             if ($visible) {
                 return;
             }
             abort(403, 'Ticket not in your department/unit/assigned scope');
         }
         if ($ticket->user_id !== $user->id) {
-            abort(403);
+            if (! $ticket->anonymous_token || ! in_array($ticket->anonymous_token, $anonymousTokens, true)) {
+                abort(403);
+            }
         }
+    }
+
+    private function anonymousTokens(Request $request): array
+    {
+        $tokens = $request->session()->get('anonymous_ticket_tokens', []);
+
+        return is_array($tokens) ? $tokens : [];
     }
 }

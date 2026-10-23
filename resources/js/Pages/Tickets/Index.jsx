@@ -68,7 +68,7 @@ export default function Index({ tickets, filters, scope, canSeeAll, isAll }) {
                                 <td className="p-3 text-xs">{t.department?.name || '—'}</td>
                                 <td className="p-3"><span className="px-2 py-1 rounded text-xs bg-slate-100">{t.priority || '—'}</span>{t.escalated_at && <span className="ml-1 text-xs bg-amber-100 px-1 rounded">escalated</span>}</td>
                                 <td className="p-3">{t.status || '—'}</td>
-                                <td className="p-3">{t.user?.name || '—'}</td>
+                                <td className="p-3">{t.is_anonymous ? <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Anonymous</span> : (t.user?.name || '—')}</td>
                             </tr>
                         ))}
                         {list.length===0 && <tr><td colSpan={6} className="p-6 text-center text-slate-500">No tickets. <Link href="/tickets/create" className="underline">Create one</Link></td></tr>}

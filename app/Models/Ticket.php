@@ -21,6 +21,8 @@ class Ticket extends Model
         'escalated_at',
         'status',
         'user_id',
+        'is_anonymous',
+        'anonymous_token',
         'assigned_to',
         'location',
         'country',
@@ -31,7 +33,10 @@ class Ticket extends Model
         'closed_at',
     ];
 
+    protected $hidden = ['anonymous_token'];
+
     protected $casts = [
+        'is_anonymous' => 'boolean',
         'offline_created' => 'boolean',
         'closed_at' => 'datetime',
         'sla_due_at' => 'datetime',
@@ -80,8 +85,10 @@ class Ticket extends Model
      * - Soldier (no Admin/Support/SuperAdmin): owns only (user_id)
      * - Admin/Support: sees own created + assigned_to self + department match (+ unit fallback)
      * Pass $forceAll=true to bypass for explicit ?scope=all requests (checked by caller).
+     * $anonymousTokens are tokens issued to this viewer for their own anonymous
+     * submissions; they grant visibility without linking the ticket to a user.
      */
-    public function scopeVisibleTo(Builder $query, User $user, bool $forceAll = false): Builder
+    public function scopeVisibleTo(Builder $query, User $user, bool $forceAll = false, array $anonymousTokens = []): Builder
     {
         if ($forceAll && $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support'])) {
             return $query;
@@ -89,15 +96,26 @@ class Ticket extends Model
         if ($user->hasRole('SuperAdmin')) {
             return $query;
         }
-        // Soldier-only (no privileged role) => own tickets only
+
+        $anonymousTokens = array_values(array_filter($anonymousTokens, fn ($token) => is_string($token) && $token !== ''));
+
+        // Soldier-only (no privileged role) => own tickets + own anonymous submissions
         if (! $user->hasAnyRole(['Admin', 'Support'])) {
-            return $query->where('user_id', $user->id);
+            return $query->where(function (Builder $q) use ($user, $anonymousTokens) {
+                $q->where('user_id', $user->id);
+                if ($anonymousTokens) {
+                    $q->orWhereIn('anonymous_token', $anonymousTokens);
+                }
+            });
         }
 
-        // Admin / Support: scoped to department / unit / own / assigned
-        return $query->where(function (Builder $q) use ($user) {
+        // Admin / Support: scoped to department / unit / own / assigned / own anonymous
+        return $query->where(function (Builder $q) use ($user, $anonymousTokens) {
             $q->where('user_id', $user->id)
                 ->orWhere('assigned_to', $user->id);
+            if ($anonymousTokens) {
+                $q->orWhereIn('anonymous_token', $anonymousTokens);
+            }
             if ($user->department_id) {
                 $q->orWhere('department_id', $user->department_id);
             } elseif ($user->unit) {

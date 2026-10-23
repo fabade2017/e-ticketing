@@ -39,8 +39,8 @@ export default function Show({ ticket, departments, roles, histories }) {
                         <div><span className="text-slate-500">LGA:</span> {ticket.lga || '—'}</div>
                         <div><span className="text-slate-500">Location:</span> {ticket.location || '—'}</div>
                         <div><span className="text-slate-500">Assigned:</span> {ticket.assignee ? `${ticket.assignee.rank} ${ticket.assignee.name} (${ticket.assignee.service_number})` : 'Unassigned'}</div>
-                        <div><span className="text-slate-500">Raised by:</span> {ticket.user?.name} ({ticket.user?.service_number})</div>
-                        <div><span className="text-slate-500">Unit:</span> {ticket.unit || '—'}</div>
+                        <div><span className="text-slate-500">Raised by:</span> {ticket.is_anonymous ? <span className="font-semibold text-amber-700">Anonymous</span> : `${ticket.user?.name || '—'} (${ticket.user?.service_number || '—'})`}</div>
+                        <div><span className="text-slate-500">Unit:</span> {ticket.is_anonymous ? 'Hidden' : (ticket.unit || '—')}</div>
                     </div>
                     {histories?.length > 0 && (
                         <div className="mt-6 border-t pt-4">
@@ -48,7 +48,7 @@ export default function Show({ ticket, departments, roles, histories }) {
                             <div className="mt-3 space-y-2 max-h-64 overflow-auto">
                                 {histories.map(h=>(
                                     <div key={h.id} className="text-xs border rounded p-2 bg-slate-50">
-                                        <div className="font-mono">{new Date(h.created_at).toLocaleString()} — {h.user?.name || 'System'} — {h.action}</div>
+                                        <div className="font-mono">{new Date(h.created_at).toLocaleString()} — {h.user?.name || (h.action === 'created' && ticket.is_anonymous ? 'Anonymous' : 'System')} — {h.action}</div>
                                         <div className="text-slate-600">From: {JSON.stringify(h.from)} → To: {JSON.stringify(h.to)} {h.ip && `• ${h.ip}`}</div>
                                     </div>
                                 ))}

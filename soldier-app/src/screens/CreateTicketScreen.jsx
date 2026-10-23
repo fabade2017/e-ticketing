@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Modal, FlatList, StyleSheet } from 'react-native';
-import client, { queueTicket, getMeta } from '../api/client';
+import client, { queueTicket, getMeta, addAnonymousToken } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import SyncButton from '../components/SyncButton';
 import { NIGERIA_STATES, STATES } from '../data/nigeria';
@@ -51,7 +51,7 @@ function Dropdown({ label, value, placeholder, options, onSelect, disabled }) {
 export default function CreateTicketScreen({ navigation }) {
   const { user } = useAuth();
   const [departments, setDepartments] = useState([]);
-  const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', department_id: user?.department_id || '', country: DEFAULT_COUNTRY, state:'', lga:'', location:'' });
+  const [form, setForm] = useState({ title:'', description:'', category:'other', priority:'medium', department_id: user?.department_id || '', country: DEFAULT_COUNTRY, state:'', lga:'', location:'', is_anonymous: false });
   const [saving, setSaving] = useState(false);
   const isNigeria = form.country === 'Nigeria';
   const lgaOptions = (isNigeria && form.state) ? (NIGERIA_STATES[form.state] || []).map(l=>({ label:l, value:l })) : [];
@@ -70,7 +70,8 @@ export default function CreateTicketScreen({ navigation }) {
     }
     setSaving(true);
     try {
-      await client.post('/tickets', form);
+      const { data } = await client.post('/tickets', form);
+      if (data?.anonymous_token) await addAnonymousToken(data.anonymous_token);
       Alert.alert('Success', 'Ticket created');
       navigation.goBack();
     } catch (e) {
@@ -90,6 +91,20 @@ export default function CreateTicketScreen({ navigation }) {
     <ScrollView style={s.container} contentContainerStyle={{ padding:16, paddingBottom: 40 }}>
       <Text style={s.h1}>Create Ticket</Text>
       <Text style={s.hint}>For remote/border outposts: auto-queues offline and syncs. Fields match web app.</Text>
+
+      <TouchableOpacity
+        onPress={()=>setForm({...form, is_anonymous: !form.is_anonymous})}
+        style={[s.anonBtn, form.is_anonymous && s.anonBtnOn]}
+        accessibilityRole="button"
+        accessibilityState={{ selected: form.is_anonymous }}
+      >
+        <Text style={[s.anonTxt, form.is_anonymous && { color:'#fff' }]}>
+          {form.is_anonymous ? 'Anonymous: ON — tap to disable' : 'Anonymous — hide my identity'}
+        </Text>
+      </TouchableOpacity>
+      {form.is_anonymous && (
+        <Text style={s.anonNote}>Your name, service number, unit and IP will not be stored. It will still appear in your ticket list on this device.</Text>
+      )}
 
       <Text style={s.label}>Title</Text>
       <TextInput style={s.input} value={form.title} onChangeText={v=>setForm({...form, title:v})} placeholder="e.g. Water pump faulty at OP 1" />
@@ -133,6 +148,10 @@ const s = StyleSheet.create({
   input:{ backgroundColor:'#fff', borderWidth:1, borderColor:'#cbd5e1', borderRadius:10, padding:12 },
   btn:{ backgroundColor:'#0b3d0b', borderRadius:12, padding:14, alignItems:'center', marginTop:16 },
   btnTxt:{ color:'#fff', fontWeight:'800' },
+  anonBtn:{ backgroundColor:'#fff', borderWidth:1, borderColor:'#cbd5e1', borderRadius:12, padding:12, alignItems:'center', marginTop:14 },
+  anonBtnOn:{ backgroundColor:'#b45309', borderColor:'#b45309' },
+  anonTxt:{ fontWeight:'800', color:'#334155', fontSize:12 },
+  anonNote:{ fontSize:10, color:'#92400e', backgroundColor:'#fffbeb', borderWidth:1, borderColor:'#fcd34d', borderRadius:10, padding:10, marginTop:8, lineHeight:14 },
   note:{ fontSize:10, color:'#94a3b8', marginTop:8, textAlign:'center' },
   modalOverlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.4)', justifyContent:'center', padding:20 },
   modalBox:{ backgroundColor:'#fff', borderRadius:16, padding:16, maxHeight: 520 },
