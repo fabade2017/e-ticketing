@@ -106,4 +106,5 @@ Route::middleware('auth')->group(function () {
 
     require __DIR__.'/maintenance.php';
     require __DIR__.'/supply.php';
+    require __DIR__.'/care.php';
 });

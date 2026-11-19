@@ -1,5 +1,6 @@
 <?php
 
+use App\Shared\Reporting\CareInsightsProvider;
 use App\Shared\Reporting\MaintenanceInsightsProvider;
 use App\Shared\Reporting\SupplyInsightsProvider;
 use App\Shared\Reporting\TicketingInsightsProvider;
@@ -18,6 +19,12 @@ return [
             'icon' => '✚',
             'permission' => 'use care workspace',
         ],
+        'care-portal' => [
+            'label' => 'Patient Portal',
+            'route' => '/portal',
+            'icon' => '✚',
+            'permission' => 'use care portal',
+        ],
         'maintenance' => [
             'label' => 'Maintenance',
             'route' => '/maintenance',
@@ -34,6 +41,7 @@ return [
 
     'insights_providers' => [
         TicketingInsightsProvider::class,
+        CareInsightsProvider::class,
         MaintenanceInsightsProvider::class,
         SupplyInsightsProvider::class,
     ],
