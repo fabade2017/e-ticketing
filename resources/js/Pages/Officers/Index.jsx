@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
 import FaceAuth from '../../Components/FaceAuth';
+import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function Index({ officers, filters, roles, stats, scope, isAll, canSeeAll }) {
     const page = usePage();
@@ -24,11 +25,24 @@ export default function Index({ officers, filters, roles, stats, scope, isAll, c
         else { alert(await res.text()); }
     };
 
-    const apply = () => {
-        const params = { search, role, face };
+    const applyFilters = (next) => {
+        const params = { search: next.search, role: next.role, face: next.face };
         if (!isAll && filters?.scope) params.scope = filters.scope;
         if (isAll) params.scope = 'all';
-        router.get('/officers', params, { preserveState: true, replace: true });
+        router.get('/officers', params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['officers', 'filters'],
+        });
+    };
+
+    const applyNow = useLiveFilters({ search, role, face }, applyFilters, 300);
+    const reset = () => {
+        setSearch('');
+        setRole('');
+        setFace('');
+        applyNow({ search: '', role: '', face: '' });
     };
 
     return (
@@ -52,7 +66,7 @@ export default function Index({ officers, filters, roles, stats, scope, isAll, c
             <div className="bg-white border rounded-xl p-4 mt-4 flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[200px]">
                     <label className="text-xs font-medium">Search name / service no / rank</label>
-                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="e.g. NA/SL/003 or Pte" className="w-full border rounded px-3 py-2 mt-1" onKeyDown={e=>e.key==='Enter'&&apply()} />
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="e.g. NA/SL/003 or Pte" className="w-full border rounded px-3 py-2 mt-1" onKeyDown={e=>e.key==='Enter'&&applyNow()} />
                 </div>
                 <div>
                     <label className="text-xs font-medium">Role</label>
@@ -67,8 +81,8 @@ export default function Index({ officers, filters, roles, stats, scope, isAll, c
                         <option value="">All</option><option value="enrolled">Enrolled</option><option value="pending">Pending</option>
                     </select>
                 </div>
-                <button onClick={apply} className="bg-slate-800 text-white px-6 py-2 rounded">Filter</button>
-                <Link href="/officers" className="border px-4 py-2 rounded text-sm">Reset</Link>
+                <button onClick={()=>applyNow()} className="bg-slate-800 text-white px-6 py-2 rounded">Filter</button>
+                <button onClick={reset} className="border px-4 py-2 rounded text-sm">Reset</button>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">

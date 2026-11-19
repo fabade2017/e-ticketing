@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -10,7 +13,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     protected $fillable = [
         'name',
@@ -20,6 +23,7 @@ class User extends Authenticatable
         'rank',
         'unit',
         'department_id',
+        'current_hospital_id',
         'phone',
         'face_embedding',
         'face_enrolled_at',
@@ -46,9 +50,43 @@ class User extends Authenticatable
         return $this->hasMany(Ticket::class, 'assigned_to');
     }
 
-    public function department() { return $this->belongsTo(Department::class); }
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function hospitals(): BelongsToMany
+    {
+        return $this->belongsToMany(Hospital::class)
+            ->withPivot(['local_role', 'is_active'])
+            ->withTimestamps();
+    }
+
+    public function currentHospital(): BelongsTo
+    {
+        return $this->belongsTo(Hospital::class, 'current_hospital_id');
+    }
+
+    public function suiteNotifications(): MorphMany
+    {
+        return $this->morphMany(SuiteNotification::class, 'notifiable');
+    }
+
+    public function canAccessHospital(int $hospitalId): bool
+    {
+        if ($this->hasRole('SuperAdmin')) {
+            return true;
+        }
+
+        return $this->hospitals()
+            ->where('hospitals.id', $hospitalId)
+            ->wherePivot('is_active', true)
+            ->where('hospitals.is_active', true)
+            ->exists();
+    }
+
     public function hasFaceEnrolled(): bool
     {
-        return !empty($this->face_embedding);
+        return ! empty($this->face_embedding);
     }
 }

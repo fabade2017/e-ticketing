@@ -1,11 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../Components/Layout';
+import StatCard from '../Components/ui/StatCard';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 
 const COLORS = ['#0b3d0b','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
 
-export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll }) {
+export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll, suiteInsights }) {
     const { auth, branding } = usePage().props;
     const appName = branding?.app_name || 'NA E-Ticket';
     const isSoldier = stats?.isSoldier;
@@ -93,6 +94,23 @@ export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll }
                 </div>
                 <Link href="/officers" className="bg-[#0b3d0b] text-white px-4 py-2 rounded text-sm hidden md:block">View Officers & Faces →</Link>
             </div>
+
+            {(suiteInsights || []).length > 0 && (
+                <div className="mt-6">
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Suite overview</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                        {suiteInsights.flatMap((group) => group.metrics.map((metric) => (
+                            <StatCard
+                                key={`${group.key}-${metric.label}`}
+                                label={`${group.label} · ${metric.label}`}
+                                value={metric.value}
+                                href={metric.url}
+                                accent={metric.label.toLowerCase().includes('overdue') ? 'border-red-500' : 'border-slate-800'}
+                            />
+                        )))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
                 {[

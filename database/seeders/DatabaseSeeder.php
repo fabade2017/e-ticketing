@@ -82,6 +82,8 @@ class DatabaseSeeder extends Seeder
         SystemSetting::firstOrCreate(['key' => 'face_auth_enabled'], ['value' => '1', 'description' => 'enable/disable face auth']);
         SystemSetting::firstOrCreate(['key' => 'face_cloud_provider'], ['value' => 'aws', 'description' => 'aws or azure']);
 
+        $this->call(SuiteSeeder::class);
+
         // Sample tickets
         if (Ticket::count() === 0) {
             Ticket::create(['title' => 'Water supply disruption at outpost', 'description' => 'Borehole pump faulty, requires logistics support', 'category' => 'logistics', 'priority' => 'high', 'status' => 'open', 'user_id' => $soldier->id, 'location' => 'Border Outpost A', 'unit' => 'Border Outpost A']);

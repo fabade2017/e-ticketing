@@ -15,7 +15,7 @@ class TicketController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $query = Ticket::with(['user', 'assignee', 'department'])->latest();
+        $query = Ticket::with(['user:id,name', 'assignee:id,name,rank,service_number', 'department:id,name'])->latest();
 
         // RBAC: default is per-user scoped. ?scope=all allows privileged to see everything.
         $scopeParam = $request->input('scope');
@@ -33,7 +33,7 @@ class TicketController extends Controller
         }
         // additional filter param ?view=unit|department|mine for toggle UI
         if ($request->input('view') === 'mine') {
-            $query = Ticket::with(['user', 'assignee', 'department'])->where(function ($q) use ($user, $anonymousTokens) {
+            $query = Ticket::with(['user:id,name', 'assignee:id,name,rank,service_number', 'department:id,name'])->where(function ($q) use ($user, $anonymousTokens) {
                 $q->where('user_id', $user->id);
                 if ($anonymousTokens) {
                     $q->orWhereIn('anonymous_token', $anonymousTokens);

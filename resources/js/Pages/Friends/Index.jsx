@@ -1,6 +1,7 @@
-import { useForm, router, Link, usePage } from '@inertiajs/react';
+import { router, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
+import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function FriendsIndex({ users, friends, pendingReceived, pendingSent, groupRequests, filters }) {
     const { flash, auth } = usePage().props;
@@ -8,7 +9,13 @@ export default function FriendsIndex({ users, friends, pendingReceived, pendingS
     const [search, setSearch] = useState(filters?.search || '');
     const [msg, setMsg] = useState({});
 
-    const doSearch = () => router.get('/friends', { search }, { preserveState:true, replace:true });
+    const applyFilters = (next) => router.get('/friends', { search: next.search }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['users', 'filters'],
+    });
+    const applyNow = useLiveFilters({ search }, applyFilters, 300);
 
     const sendColleague = (receiver_id) => router.post('/friends/request', { receiver_id, message: msg[receiver_id] || '' });
     const sendGroupJoin = (group_id) => router.post('/friends/group-join', { group_id, message: msg[`g-${group_id}`] || '' });
@@ -23,10 +30,10 @@ export default function FriendsIndex({ users, friends, pendingReceived, pendingS
             <div className="bg-white border rounded-xl p-4 mt-4 flex gap-3 items-end">
                 <div className="flex-1">
                     <label className="text-xs font-medium">Search individual / number</label>
-                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="e.g. NA/SL/003, Musa, Pte" className="w-full border rounded px-3 py-2 mt-1" onKeyDown={e=>e.key==='Enter'&&doSearch()} />
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="e.g. NA/SL/003, Musa, Pte" className="w-full border rounded px-3 py-2 mt-1" onKeyDown={e=>e.key==='Enter'&&applyNow()} />
                 </div>
-                <button onClick={doSearch} className="bg-slate-800 text-white px-6 py-2 rounded">Search</button>
-                <Link href="/friends" className="border px-4 py-2 rounded text-sm">Reset</Link>
+                <button onClick={()=>applyNow()} className="bg-slate-800 text-white px-6 py-2 rounded">Search</button>
+                <button onClick={()=>{ setSearch(''); applyNow({ search: '' }); }} className="border px-4 py-2 rounded text-sm">Reset</button>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6 mt-6">

@@ -13,12 +13,16 @@ export default function Show({ ticket, departments, roles, histories }) {
 
     useEffect(()=>{
         if (!role && !deptId && !search) { setUsers([]); return; }
-        const params = new URLSearchParams();
-        if (role) params.append('role', role);
-        if (deptId) params.append('department_id', deptId);
-        if (search) params.append('search', search);
-        fetch(`/admin/departments/users/search?${params.toString()}`, { headers:{'Accept':'application/json'}})
-            .then(r=> r.ok ? r.json() : []).then(j=> setUsers(Array.isArray(j) ? j : [])).catch(()=> setUsers([]));
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            const params = new URLSearchParams();
+            if (role) params.append('role', role);
+            if (deptId) params.append('department_id', deptId);
+            if (search) params.append('search', search);
+            fetch(`/admin/departments/users/search?${params.toString()}`, { headers:{'Accept':'application/json'}, signal: controller.signal })
+                .then(r=> r.ok ? r.json() : []).then(j=> setUsers(Array.isArray(j) ? j : [])).catch(err=> { if (err.name !== 'AbortError') setUsers([]); });
+        }, 300);
+        return () => { clearTimeout(timer); controller.abort(); };
     }, [role, deptId, search]);
 
     const update = e => { e.preventDefault(); put(`/tickets/${ticket.id}`); };

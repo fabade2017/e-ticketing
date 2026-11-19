@@ -103,4 +103,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/admin/users/crud/{user}', [UserCrudController::class, 'update'])->name('admin.users.crud.update');
         Route::delete('/admin/users/crud/{user}', [UserCrudController::class, 'destroy'])->name('admin.users.crud.destroy');
     });
+
+    require __DIR__.'/maintenance.php';
+    require __DIR__.'/supply.php';
 });

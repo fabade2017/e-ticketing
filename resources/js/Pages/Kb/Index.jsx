@@ -1,18 +1,26 @@
-import { useForm, router, Link } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
+import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function KbIndex({ articles, filters, canManage }) {
     const [search, setSearch] = useState(filters?.search || '');
     const { data, setData, post, processing } = useForm({ title:'', category:'general', body:'' });
-    const doSearch = ()=> router.get('/kb', { search }, { preserveState:true });
+    const applyFilters = (next) => router.get('/kb', { search: next.search }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['articles', 'filters'],
+    });
+    const applyNow = useLiveFilters({ search }, applyFilters, 300);
     return (
         <Layout>
             <h1 className="text-2xl font-bold">Knowledge Base</h1>
             <p className="text-sm text-slate-600">Self-service FAQ — reduces repeat tickets. Search before creating ticket. {canManage && 'Admin can add.'}</p>
             <div className="flex gap-2 mt-4">
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search articles" className="flex-1 border rounded px-3 py-2" onKeyDown={e=>e.key==='Enter'&&doSearch()} />
-                <button onClick={doSearch} className="bg-slate-800 text-white px-4 py-2 rounded">Search</button>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search articles" className="flex-1 border rounded px-3 py-2" onKeyDown={e=>e.key==='Enter'&&applyNow()} />
+                <button onClick={()=>{ setSearch(''); applyNow({ search: '' }); }} className="border px-4 py-2 rounded text-sm">Clear</button>
+                <button onClick={()=>applyNow()} className="bg-slate-800 text-white px-4 py-2 rounded">Search</button>
             </div>
             {canManage && (
                 <form onSubmit={e=>{e.preventDefault(); post('/kb');}} className="bg-white border rounded-xl p-4 mt-4 space-y-2">

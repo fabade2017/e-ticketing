@@ -1,6 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
+import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function Index({ tickets, filters, scope, canSeeAll, isAll }) {
     const safeTickets = tickets || { data: [] };
@@ -8,14 +9,20 @@ export default function Index({ tickets, filters, scope, canSeeAll, isAll }) {
     const [search, setSearch] = useState(safeFilters.search || '');
     const [status, setStatus] = useState(safeFilters.status || '');
     const [filter, setFilter] = useState(safeFilters.filter || '');
-    const apply = () => {
-        const params = { search, status, filter };
+    const applyFilters = (next) => {
+        const params = { search: next.search, status: next.status, filter: next.filter };
         if (safeFilters.scope) params.scope = safeFilters.scope;
         if (safeFilters.view) params.view = safeFilters.view;
         // preserve scope toggle
         if (isAll) params.scope = 'all';
-        router.get('/tickets', params, { preserveState: true });
+        router.get('/tickets', params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['tickets', 'filters'],
+        });
     };
+    const applyNow = useLiveFilters({ search, status, filter }, applyFilters, 300);
 
     const slaBadge = (t)=>{
         try {
@@ -54,7 +61,7 @@ export default function Index({ tickets, filters, scope, canSeeAll, isAll }) {
                 <select value={filter} onChange={e=>setFilter(e.target.value)} className="border rounded px-3 py-2">
                     <option value="">All</option><option value="overdue">Overdue SLA</option>
                 </select>
-                <button onClick={apply} className="bg-slate-800 text-white px-4 py-2 rounded">Filter</button>
+                <button onClick={()=>applyNow()} className="bg-slate-800 text-white px-4 py-2 rounded">Filter</button>
             </div>
             <p className="text-xs text-slate-500 mt-2">SLA: urgent 4h, high 12h, medium 24h, low 72h.</p>
             <div className="mt-6 bg-white border rounded-xl overflow-hidden">

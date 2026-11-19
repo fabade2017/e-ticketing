@@ -1,6 +1,7 @@
 import { useForm, router, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
+import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function UsersCrud({ users, roles, departments, filters }) {
     const { flash } = usePage().props;
@@ -14,7 +15,13 @@ export default function UsersCrud({ users, roles, departments, filters }) {
         setEditing(u.id);
         editForm.setData({ name:u.name, email:u.email, service_number:u.service_number, rank:u.rank||'', unit:u.unit||'', department_id:u.department_id||'', phone:u.phone||'', role:u.roles?.[0]?.name||roles[0], is_active:u.is_active, password:'' });
     };
-    const doSearch = ()=> router.get('/admin/users/crud', { search }, { preserveState:true });
+    const applyFilters = (next) => router.get('/admin/users/crud', { search: next.search }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['users', 'filters'],
+    });
+    const applyNow = useLiveFilters({ search }, applyFilters, 300);
 
     return (
         <Layout>
@@ -28,8 +35,9 @@ export default function UsersCrud({ users, roles, departments, filters }) {
             {flash?.success && <div className="bg-green-50 border border-green-200 p-2 rounded mt-3 text-sm">{flash.success}</div>}
 
             <div className="bg-white border rounded-xl p-4 mt-4 flex gap-3">
-                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name / service_number / email" className="flex-1 border rounded px-3 py-2" onKeyDown={e=>e.key==='Enter'&&doSearch()} />
-                <button onClick={doSearch} className="bg-slate-800 text-white px-4 py-2 rounded">Search</button>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name / service_number / email" className="flex-1 border rounded px-3 py-2" onKeyDown={e=>e.key==='Enter'&&applyNow()} />
+                <button onClick={()=>{ setSearch(''); applyNow({ search: '' }); }} className="border px-4 py-2 rounded text-sm">Clear</button>
+                <button onClick={()=>applyNow()} className="bg-slate-800 text-white px-4 py-2 rounded">Search</button>
             </div>
 
             {showCreate && (

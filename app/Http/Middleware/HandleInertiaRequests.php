@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\BrandingLogo;
 use App\Models\SystemSetting;
+use App\Shared\Navigation\SuiteNavigation;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -64,6 +65,15 @@ class HandleInertiaRequests extends Middleware
                 'app_logo' => BrandingLogo::displayName(),
                 'logo_url' => BrandingLogo::url(), // full URL for <img> and favicon; null if none
                 'app_download_url' => SystemSetting::getValue('app_download_url', config('branding.download_url')),
+            ],
+            'suite' => [
+                'modules' => fn () => (new SuiteNavigation)->modulesFor($request->user()),
+                'current_hospital' => fn () => $request->user()?->currentHospital ? [
+                    'id' => $request->user()->currentHospital->id,
+                    'name' => $request->user()->currentHospital->name,
+                    'code' => $request->user()->currentHospital->code,
+                ] : null,
+                'unread_notifications' => fn () => $request->user()?->suiteNotifications()->unread()->count() ?? 0,
             ],
         ];
     }
