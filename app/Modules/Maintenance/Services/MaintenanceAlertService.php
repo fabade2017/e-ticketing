@@ -78,7 +78,7 @@ class MaintenanceAlertService
 
     private function hospitalIdsFor(User $user, bool $includeAll): Collection
     {
-        if ($includeAll || $user->hasRole('SuperAdmin')) {
+        if ($includeAll && ($user->hasRole('SuperAdmin') || $user->can('view network reports'))) {
             return Hospital::active()->pluck('id');
         }
 

@@ -34,8 +34,9 @@ Route::get('/branding/logo', [BrandingController::class, 'logo'])->name('brandin
 
 Route::get('/kb', [KbController::class, 'index'])->name('kb.index')->middleware('auth');
 Route::post('/kb', [KbController::class, 'store'])->name('kb.store')->middleware(['auth', 'role:SuperAdmin|Admin']);
-Route::get('/reports', [ReportController::class, 'index'])->name('reports.index')->middleware(['auth', 'role:SuperAdmin|Admin|Support']);
-Route::get('/reports/download', [ReportController::class, 'download'])->name('reports.download')->middleware(['auth', 'role:SuperAdmin|Admin|Support']);
+Route::get('/reports', [ReportController::class, 'index'])->name('reports.index')->middleware(['auth', 'role:SuperAdmin|Admin|Support|NetworkAdmin|HospitalAdmin|LogisticsAdmin|SupplyAdmin']);
+Route::get('/reports/download', [ReportController::class, 'download'])->name('reports.download')->middleware(['auth', 'role:SuperAdmin|Admin|Support|NetworkAdmin|HospitalAdmin|LogisticsAdmin|SupplyAdmin']);
+Route::get('/reports/workbook', [ReportController::class, 'downloadWorkbook'])->name('reports.workbook')->middleware(['auth', 'role:SuperAdmin|Admin|Support|NetworkAdmin|HospitalAdmin|LogisticsAdmin|SupplyAdmin']);
 Route::get('/officers', [OfficerController::class, 'index'])->name('officers')->middleware(['auth', 'role:SuperAdmin|Admin|Support']);
 Route::get('/ai/insights', [AiController::class, 'insights'])->name('ai.insights')->middleware(['auth', 'role:SuperAdmin|Admin|Support']);
 Route::post('/ai/ask', [AiController::class, 'ask'])->name('ai.ask')->middleware(['auth', 'role:SuperAdmin|Admin|Support']);

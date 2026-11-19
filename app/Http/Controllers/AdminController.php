@@ -63,7 +63,7 @@ class AdminController extends Controller
         }
 
         // Pass user-scoped AI (reports honour same visibility)
-        $ai = AiInsightsService::generate(['user' => $isAll ? null : $user, 'from' => $request->input('from'), 'to' => $request->input('to')]);
+        $ai = AiInsightsService::generate(['user' => $user, 'report_user' => $isAll ? null : $user, 'include_all' => $isAll, 'from' => $request->input('from'), 'to' => $request->input('to')]);
 
         // Stats limited to visible scope
         $scopedOpen = (clone $base)->where('status', 'open')->count();

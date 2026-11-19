@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import client, { getQueue } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import SyncButton from '../components/SyncButton';
 import SetPinModal from '../components/SetPinModal';
 
 export default function DashboardScreen() {
+  const navigation = useNavigation();
   const { user, logout, offline, pinSet, setPin, forgetOffline } = useAuth();
   const [stats, setStats] = useState(null);
   const [queueLen, setQueueLen] = useState(0);
+  const [modules, setModules] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [showSetPin, setShowSetPin] = useState(false);
   const [pinError, setPinError] = useState('');
 
   const load = async (silent = false) => {
     try { const { data } = await client.get('/tickets/stats', { __silent: silent }); setStats(data); } catch {}
+    try { const { data } = await client.get('/suite/modules', { __silent: silent }); setModules(data?.modules || []); } catch {}
+    try { const { data } = await client.get('/suite/notifications', { __silent: silent }); setNotifications(data?.notifications || []); } catch {}
     setQueueLen((await getQueue()).length);
   };
   useEffect(() => { load(false); const id = setInterval(() => load(true), 10000); return () => clearInterval(id); }, []);
@@ -26,6 +32,14 @@ export default function DashboardScreen() {
     } catch (e) {
       setPinError(e.message || 'Could not set PIN.');
     }
+  };
+
+  const openModule = (module) => {
+    if (module.key === 'ticketing') {
+      navigation.navigate('Tickets');
+      return;
+    }
+    Alert.alert(module.label, 'Open this module from the web dashboard.');
   };
 
   return (
@@ -45,6 +59,30 @@ export default function DashboardScreen() {
         <View style={[s.card, { backgroundColor: '#dbeafe' }]}><Text style={s.num}>{stats?.in_progress ?? '—'}</Text><Text style={s.lbl}>In Progress</Text></View>
         <View style={[s.card, { backgroundColor: '#fee2e2' }]}><Text style={s.num}>{stats?.overdue ?? '—'}</Text><Text style={s.lbl}>Overdue SLA</Text></View>
       </View>
+
+      <View style={s.info}>
+        <Text style={s.infoTitle}>Suite Modules</Text>
+        <View style={s.grid}>
+          {modules.map((module) => (
+            <TouchableOpacity key={module.key} style={[s.card, { backgroundColor: '#e0f2fe' }]} onPress={() => openModule(module)}>
+              <Text style={s.num}>{module.icon}</Text>
+              <Text style={s.lbl}>{module.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {notifications.length > 0 && (
+        <View style={s.info}>
+          <Text style={s.infoTitle}>Notifications</Text>
+          {notifications.map((notification) => (
+            <View key={notification.id} style={s.notification}>
+              <Text style={s.notificationModule}>{notification.module}</Text>
+              <Text style={s.notificationTitle}>{notification.title}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={s.info}>
         <Text style={s.infoTitle}>Field Ops Notice</Text>
@@ -82,10 +120,13 @@ const s = StyleSheet.create({
   grid: { flexDirection:'row', flexWrap:'wrap', gap:12, marginTop:16 },
   card: { width:'47%', borderRadius:14, padding:16, alignItems:'center' },
   num: { fontSize:28, fontWeight:'800' },
-  lbl: { fontSize:11, color:'#475569', marginTop:4 },
+  lbl: { fontSize:11, color:'#475569', marginTop:4, textAlign:'center' },
   info: { backgroundColor:'#f8fafc', borderRadius:14, padding:16, marginTop:16, borderWidth:1, borderColor:'#e2e8f0' },
   infoTitle: { fontWeight:'800', color:'#0b3d0b' },
   infoTxt: { fontSize:12, color:'#334155', marginTop:6, lineHeight:18 },
+  notification: { borderBottomWidth:1, borderBottomColor:'#e2e8f0', paddingVertical:8 },
+  notificationModule: { fontSize:10, fontWeight:'800', color:'#0b3d0b', textTransform:'uppercase' },
+  notificationTitle: { fontSize:12, color:'#334155', marginTop:2 },
   syncBtn: { backgroundColor:'#0b3d0b', borderRadius:10, padding:12, alignItems:'center', marginTop:12 },
   syncTxt: { color:'#fff', fontWeight:'700' },
   pinBtn: { borderWidth:1, borderColor:'#0b3d0b', borderRadius:10, padding:12, alignItems:'center', marginTop:8 },

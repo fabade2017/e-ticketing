@@ -1,7 +1,21 @@
 import Layout from '../../Components/Layout';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 
-export default function ReportsIndex({ report, narrative, canGenerate, scope, isAll, canSeeAll }) {
+export default function ReportsIndex({ report, narrative, canGenerate, scope, isAll, canSeeAll, suiteSections = [], availableModules = [], selectedModule = 'all', filters = {}, canSeeNetworkReports = false }) {
+    const workbookQuery = new URLSearchParams();
+    workbookQuery.set('module', selectedModule);
+    ['from', 'to', 'scope', 'type', 'drill'].forEach((key) => {
+        if (filters[key]) workbookQuery.set(key, filters[key]);
+    });
+    const workbookUrl = `/reports/workbook?${workbookQuery.toString()}`;
+
+    const changeModule = (event) => {
+        router.get('/reports', { ...filters, module: event.target.value }, {
+            preserveState: false,
+            preserveScroll: true,
+        });
+    };
+
     return (
         <Layout>
             <div className="flex justify-between items-start">
@@ -12,12 +26,24 @@ export default function ReportsIndex({ report, narrative, canGenerate, scope, is
                         <span className={`text-xs px-2 py-1 rounded-full border ${isAll ? 'bg-slate-800 text-white border-slate-800' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>{isAll ? 'Scope: All tickets' : `Scope: ${scope || 'personal'} — filtered to your visible tickets`}</span>
                         {canSeeAll && (
                             isAll
-                                ? <Link href="/reports" className="text-xs underline text-[#0b3d0b]">Switch to My Scope</Link>
+                                ? <Link href="/reports?scope=scoped" className="text-xs underline text-[#0b3d0b]">Switch to My Scope</Link>
                                 : <Link href="/reports?scope=all" className="text-xs underline text-[#0b3d0b]">View All (privileged)</Link>
                         )}
                     </div>
+                    <div className="mt-3 flex gap-2 items-center">
+                        <label htmlFor="report-module" className="text-xs font-semibold text-slate-600">Module</label>
+                        <select id="report-module" value={selectedModule} onChange={changeModule} className="border rounded px-2 py-1 text-xs bg-white">
+                            {availableModules.map((module) => (
+                                <option key={module.key} value={module.key}>{module.label}</option>
+                            ))}
+                        </select>
+                        {canSeeNetworkReports && <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">Network report access</span>}
+                    </div>
                 </div>
-                <a href={isAll ? '/reports/download?scope=all' : '/reports/download'} className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold hidden md:block">Download SITREP .txt</a>
+                <div className="hidden md:flex flex-col gap-2 items-end">
+                    <a href={workbookUrl} className="bg-[#0b3d0b] text-white px-4 py-2 rounded text-sm font-semibold">Download Suite Workbook .xlsx</a>
+                    <a href={isAll ? '/reports/download?scope=all' : '/reports/download'} className="border border-slate-300 px-4 py-2 rounded text-sm font-semibold">Download SITREP .txt</a>
+                </div>
             </div>
 
             <div className="grid md:grid-cols-3 gap-4 mt-6">
@@ -36,6 +62,25 @@ export default function ReportsIndex({ report, narrative, canGenerate, scope, is
             </div>
 
             <div className="bg-white border rounded-xl p-6 mt-6">
+                <h3 className="font-bold">Suite Module Metrics</h3>
+                <div className="grid md:grid-cols-2 gap-4 mt-3">
+                    {suiteSections.map((section) => (
+                        <div key={section.key} className="border rounded-lg p-4">
+                            <div className="text-sm font-bold text-[#0b3d0b]">{section.label}</div>
+                            <div className="mt-2 space-y-1">
+                                {section.metrics.map((metric) => (
+                                    <div key={metric.label} className="flex justify-between text-xs text-slate-600">
+                                        <span>{metric.label}</span>
+                                        <span className="font-bold text-slate-800">{metric.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-white border rounded-xl p-6 mt-6">
                 <h3 className="font-bold">AI Insights — World-Class Standard (NATO/J4/NIST)</h3>
                 <ul className="list-disc ml-5 mt-3 space-y-1 text-sm">
                     {report.insights.map((ins,i)=><li key={i}>{ins}</li>)}
@@ -46,7 +91,7 @@ export default function ReportsIndex({ report, narrative, canGenerate, scope, is
                 <h3 className="font-bold">🤖 AI SITREP Narrative {canGenerate ? '(Groq)' : '(Local — add GROQ_API_KEY for Groq)'}</h3>
                 {narrative ? <pre className="bg-white text-slate-800 rounded p-4 mt-3 text-sm whitespace-pre-wrap break-words">{narrative}</pre> : <p className="text-sm opacity-80 mt-3">No LLM narrative — rule-based insights above. Add Groq key to generate world-class SITREP.</p>}
                 <div className="mt-4 flex gap-3">
-                    <a href={isAll ? '/reports/download?scope=all' : '/reports/download'} className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold">Download SITREP .txt</a>
+                    <a href={workbookUrl} className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold">Download Suite Workbook .xlsx</a>
                     <Link href="/dashboard" className="border border-white/30 px-4 py-2 rounded text-sm">Back to Dashboard</Link>
                 </div>
             </div>

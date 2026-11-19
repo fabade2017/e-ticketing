@@ -8,6 +8,8 @@ use App\Modules\Care\Models\CareInvoice;
 use App\Modules\Care\Models\CarePayment;
 use App\Modules\Care\Models\CareRegistration;
 use App\Modules\Care\Models\CareVisit;
+use App\Services\PaymentGateway;
+use App\Services\PaymentGatewayManager;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -54,18 +56,27 @@ class CareBillingService
         return $invoice;
     }
 
-    public function submitPayment(CareInvoice $invoice, User $actor, array $attributes, ?UploadedFile $receipt = null): CarePayment
+    public function submitPayment(CareInvoice $invoice, User $actor, array $attributes, ?UploadedFile $receipt = null, ?PaymentGateway $gateway = null): CarePayment
     {
         $this->authorizeInvoiceAccess($invoice, $actor);
 
-        if (empty($attributes['bank_reference'])) {
-            throw ValidationException::withMessages(['bank_reference' => 'A transfer reference is required.']);
-        }
+        $gateway ??= app(PaymentGatewayManager::class)->gateway($attributes['gateway'] ?? null);
 
         $amount = (float) ($attributes['amount'] ?? 0);
 
         if ($amount <= 0) {
             throw ValidationException::withMessages(['amount' => 'A positive payment amount is required.']);
+        }
+
+        if ($gateway->requiresReceipt() && $receipt === null) {
+            throw ValidationException::withMessages(['receipt' => 'A payment receipt is required.']);
+        }
+
+        $initiation = $gateway->initiate($invoice, $attributes);
+        $bankReference = $attributes['bank_reference'] ?? ($initiation['reference'] ?? null);
+
+        if ($gateway->requiresBankReference() && empty($bankReference)) {
+            throw ValidationException::withMessages(['bank_reference' => 'A transfer reference is required.']);
         }
 
         $receiptPath = null;
@@ -79,19 +90,49 @@ class CareBillingService
             'hospital_id' => $invoice->hospital_id,
             'patient_id' => $invoice->patient_id,
             'amount' => $amount,
-            'method' => $attributes['method'] ?? 'manual_transfer',
-            'bank_reference' => $attributes['bank_reference'],
+            'method' => $gateway->key(),
+            'bank_reference' => $bankReference,
             'receipt_path' => $receiptPath,
             'credited' => false,
             'status' => 'pending',
             'submitted_by' => $actor->id,
             'paid_at' => now(),
-            'metadata' => [],
+            'metadata' => [
+                'gateway' => $gateway->key(),
+                'initiation' => $initiation,
+            ],
         ]);
 
-        AuditTrail::record('care.payment_submitted', $payment, [], $invoice->hospital_id);
+        AuditTrail::record('care.payment_submitted', $payment, [
+            'gateway' => $gateway->key(),
+        ], $invoice->hospital_id);
 
         return $payment;
+    }
+
+    public function syncGatewayPayment(CarePayment $payment, ?PaymentGateway $gateway = null): ?array
+    {
+        $gateway ??= app(PaymentGatewayManager::class)->gateway($payment->method);
+        $result = $gateway->verify($payment);
+
+        if ($result === null) {
+            return null;
+        }
+
+        $metadata = $payment->metadata ?? [];
+        $metadata['verification'] = $result;
+        $payment->forceFill(['metadata' => $metadata])->save();
+
+        if (($result['status'] ?? null) === 'verified' && $payment->status !== 'verified') {
+            $this->markPaymentVerified(
+                $payment,
+                (string) ($result['reference'] ?? $payment->bank_reference),
+                null,
+                'care.payment_verified_by_gateway'
+            );
+        }
+
+        return $result;
     }
 
     public function verifyPayment(CarePayment $payment, User $actor, array $attributes): CarePayment
@@ -112,11 +153,20 @@ class CareBillingService
             throw ValidationException::withMessages(['credited' => 'Accounts must confirm that the transfer is actually credited.']);
         }
 
+        return $this->markPaymentVerified($payment, (string) $attributes['bank_reference'], $actor);
+    }
+
+    private function markPaymentVerified(
+        CarePayment $payment,
+        string $reference,
+        ?User $actor,
+        string $event = 'care.payment_verified'
+    ): CarePayment {
         $payment->forceFill([
-            'bank_reference' => $attributes['bank_reference'],
+            'bank_reference' => $reference,
             'credited' => true,
             'status' => 'verified',
-            'verified_by' => $actor->id,
+            'verified_by' => $actor?->id,
             'verified_at' => now(),
         ])->save();
 
@@ -128,7 +178,7 @@ class CareBillingService
             'status' => $amountPaid >= (float) $invoice->total ? 'paid' : 'partially_paid',
         ])->save();
 
-        AuditTrail::record('care.payment_verified', $payment, [
+        AuditTrail::record($event, $payment, [
             'invoice_status' => $invoice->status,
         ], $payment->hospital_id);
 

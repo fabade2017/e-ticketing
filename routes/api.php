@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\SuiteController;
 use App\Http\Controllers\Api\TicketController;
 use App\Models\BrandingLogo;
 use App\Models\Department;
@@ -39,6 +40,8 @@ Route::post('/face/verify', [AuthController::class, 'faceVerify'])->name('api.fa
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::get('/user', [AuthController::class, 'me'])->name('api.user');
+    Route::get('/suite/modules', [SuiteController::class, 'modules'])->name('api.suite.modules');
+    Route::get('/suite/notifications', [SuiteController::class, 'notifications'])->name('api.suite.notifications');
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::post('/logout-all', [AuthController::class, 'logoutAll'])->name('api.logoutAll');
 

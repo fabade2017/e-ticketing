@@ -8,6 +8,7 @@ use App\Modules\Care\Models\CarePatient;
 use App\Modules\Care\Services\CareAppointmentService;
 use App\Modules\Care\Services\CareDutyCertificateService;
 use App\Modules\Care\Services\CareRegistrationService;
+use App\Services\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -85,13 +86,15 @@ class CarePortalController extends Controller
         return back()->with('success', 'Appointment request submitted. It is not confirmed until Reception confirms.');
     }
 
-    public function invoices(Request $request): Response
+    public function invoices(Request $request, PaymentGatewayManager $gateways): Response
     {
         $patient = $this->resolvePatient($request);
 
         return Inertia::render('Care/Portal/Invoices', [
             'patient' => $patient,
             'invoices' => $patient->invoices()->with('payments')->latest()->get(),
+            'paymentGateways' => $gateways->options(),
+            'defaultGateway' => $gateways->defaultKey(),
         ]);
     }
 

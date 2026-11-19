@@ -2,9 +2,9 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import appConfig from '../../app.json';
 
-// Render live backend - works on any network
-export const API_URL = 'https://na-e-ticketing.onrender.com/api';
+export const API_URL = appConfig.expo.extra.apiUrl;
 
 const client = axios.create({
   baseURL: API_URL,

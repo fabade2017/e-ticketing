@@ -81,6 +81,9 @@ Route::middleware(['permission:use care workspace', 'hospital'])
         Route::post('payments/{payment}/verify', [CareBillingController::class, 'verifyPayment'])
             ->middleware('permission:verify payments')
             ->name('payments.verify');
+        Route::post('payments/{payment}/gateway-sync', [CareBillingController::class, 'syncPayment'])
+            ->middleware('permission:verify payments')
+            ->name('payments.gateway-sync');
 
         Route::get('duty-certificates', [CareDutyCertificateController::class, 'index'])->name('duty-certificates.index');
         Route::post('duty-certificates', [CareDutyCertificateController::class, 'store'])

@@ -8,15 +8,17 @@ use App\Modules\Care\Models\CarePayment;
 use App\Modules\Care\Models\CareRegistration;
 use App\Modules\Care\Models\CareVisit;
 use App\Modules\Care\Services\CareBillingService;
+use App\Services\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CareBillingController extends Controller
 {
-    public function invoices(Request $request): Response
+    public function invoices(Request $request, PaymentGatewayManager $gateways): Response
     {
         $user = auth()->user();
         $hospitalId = $user->hasRole('SuperAdmin') || ($request->input('scope') === 'all' && $user->can('view network reports'))
@@ -31,6 +33,8 @@ class CareBillingController extends Controller
                 ->paginate(20)
                 ->withQueryString(),
             'filters' => $request->only(['status', 'scope']),
+            'paymentGateways' => $gateways->options(),
+            'defaultGateway' => $gateways->defaultKey(),
         ]);
     }
 
@@ -52,20 +56,51 @@ class CareBillingController extends Controller
         return back()->with('success', 'Invoice created.');
     }
 
-    public function storePayment(Request $request, CareInvoice $invoice, CareBillingService $billing): RedirectResponse
+    public function storePayment(Request $request, CareInvoice $invoice, CareBillingService $billing, PaymentGatewayManager $gateways): RedirectResponse
     {
         Gate::authorize('viewInvoice', $invoice);
 
         $validated = $request->validate([
+            'gateway' => ['required', Rule::in(collect($gateways->options())->pluck('key')->all())],
             'amount' => ['required', 'numeric', 'min:1'],
-            'bank_reference' => ['required', 'string', 'max:150'],
+            'bank_reference' => ['nullable', 'string', 'max:150'],
             'method' => ['nullable', 'string', 'max:50'],
             'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
-        $billing->submitPayment($invoice, auth()->user(), $validated, $validated['receipt'] ?? null);
+        $gateway = $gateways->gateway($validated['gateway']);
 
-        return back()->with('success', 'Payment submitted for Accounts verification.');
+        if ($gateway->requiresBankReference()) {
+            $validated['bank_reference'] = $request->validate([
+                'bank_reference' => ['required', 'string', 'max:150'],
+            ])['bank_reference'];
+        }
+
+        if ($gateway->requiresReceipt()) {
+            $request->validate([
+                'receipt' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            ]);
+        }
+
+        $payment = $billing->submitPayment($invoice, auth()->user(), $validated, $validated['receipt'] ?? null, $gateway);
+        $initiation = $payment->metadata['initiation'] ?? [];
+
+        if (($initiation['type'] ?? null) === 'redirect' && ! empty($initiation['checkout_url'])) {
+            return redirect()->away($initiation['checkout_url']);
+        }
+
+        return back()->with('success', "Payment submitted via {$gateway->label()} for verification.");
+    }
+
+    public function syncPayment(CarePayment $payment, CareBillingService $billing): RedirectResponse
+    {
+        $result = $billing->syncGatewayPayment($payment);
+
+        if ($result === null) {
+            return back()->with('success', 'This gateway does not support automatic verification.');
+        }
+
+        return back()->with('success', 'Gateway payment status: '.($result['status'] ?? 'pending').'.');
     }
 
     public function verifyPayment(Request $request, CarePayment $payment, CareBillingService $billing): RedirectResponse
