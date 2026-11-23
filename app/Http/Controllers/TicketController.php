@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -97,7 +99,7 @@ class TicketController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'category' => 'required|in:welfare,logistics,medical,equipment,operations,other',
+            'category' => ['required', Rule::in(SystemSetting::options('ticket_categories'))],
             'priority' => 'required|in:low,medium,high,urgent',
             'location' => 'nullable|string',
             'country' => 'required|string|max:100',

@@ -25,6 +25,18 @@ class BrandingTest extends TestCase
         return User::where('email', 'superadmin@army.mil.ng')->first();
     }
 
+    private function optionPayload(): array
+    {
+        return [
+            'ticket_categories' => "welfare\nsecurity",
+            'care_registration_categories' => "military\ndependant",
+            'care_registration_relationships' => 'sponsor, spouse',
+            'kb_categories' => "general\nguidance",
+            'supply_units' => "each\r\nbox",
+            'user_ranks' => "Pte\nSgt",
+        ];
+    }
+
     public function test_guests_cannot_manage_branding(): void
     {
         $this->get('/admin/branding')->assertRedirect('/login');
@@ -144,5 +156,32 @@ class BrandingTest extends TestCase
 
         $this->assertDatabaseCount('branding_logos', 0);
         $this->get('/branding/logo')->assertNotFound();
+    }
+
+    public function test_non_superadmin_cannot_update_dropdown_options(): void
+    {
+        $soldier = User::where('email', 'soldier@army.mil.ng')->first();
+
+        $this->actingAs($soldier)->post('/admin/settings/options', $this->optionPayload())->assertForbidden();
+    }
+
+    public function test_superadmin_can_update_and_share_dropdown_options(): void
+    {
+        $this->actingAs($this->superadmin())
+            ->post('/admin/settings/options', $this->optionPayload())
+            ->assertRedirect();
+
+        $options = SystemSetting::optionLists();
+        $this->assertSame(['welfare', 'security'], $options['ticket_categories']);
+        $this->assertSame(['military', 'dependant'], $options['care_registration_categories']);
+        $this->assertSame(['sponsor', 'spouse'], $options['care_registration_relationships']);
+        $this->assertSame(['general', 'guidance'], $options['kb_categories']);
+        $this->assertSame(['each', 'box'], $options['supply_units']);
+        $this->assertSame(['Pte', 'Sgt'], $options['user_ranks']);
+
+        $this->get('/download')->assertInertia(fn ($page) => $page
+            ->where('options.ticket_categories', ['welfare', 'security'])
+            ->where('options.supply_units', ['each', 'box'])
+        );
     }
 }

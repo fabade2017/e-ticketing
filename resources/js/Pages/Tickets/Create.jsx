@@ -1,11 +1,14 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
 import { NIGERIA_STATES, STATES } from '../../data/nigeria';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../data/countries';
 
 export default function Create({ departments, defaultDepartmentId }) {
-    const { data, setData, post, processing, errors } = useForm({ title: '', description: '', category: 'other', priority: 'medium', location: '', department_id: defaultDepartmentId || '', country: DEFAULT_COUNTRY, state: '', lga: '', is_anonymous: false });
+    const { options } = usePage().props;
+    const categories = options?.ticket_categories || [];
+    const defaultCategory = categories.includes('other') ? 'other' : (categories[0] || 'other');
+    const { data, setData, post, processing, errors } = useForm({ title: '', description: '', category: defaultCategory, priority: 'medium', location: '', department_id: defaultDepartmentId || '', country: DEFAULT_COUNTRY, state: '', lga: '', is_anonymous: false });
     const [lgaOptions, setLgaOptions] = useState([]);
     const isNigeria = data.country === 'Nigeria';
 
@@ -60,7 +63,7 @@ export default function Create({ departments, defaultDepartmentId }) {
                 )}
                 <div><label className="text-sm font-medium">Title</label><input value={data.title} onChange={e=>setData('title', e.target.value)} className="w-full border rounded px-3 py-2 mt-1" />{errors.title && <p className="text-red-600 text-xs">{errors.title}</p>}</div>
                 <div className="grid md:grid-cols-3 gap-3">
-                    <div><label className="text-sm font-medium">Category</label><select value={data.category} onChange={e=>setData('category', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="welfare">Welfare</option><option value="logistics">Logistics</option><option value="medical">Medical</option><option value="equipment">Equipment</option><option value="operations">Operations</option><option value="other">Other</option></select></div>
+                    <div><label className="text-sm font-medium">Category</label><select value={data.category} onChange={e=>setData('category', e.target.value)} className="w-full border rounded px-3 py-2 mt-1">{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></div>
                     <div><label className="text-sm font-medium">Department</label><select value={data.department_id} onChange={e=>setData('department_id', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="">Select Department</option>{Object.entries(departments || {}).map(([id,name])=> <option key={id} value={id}>{name}</option>)}</select>{errors.department_id && <p className="text-red-600 text-xs">{errors.department_id}</p>}</div>
                     <div><label className="text-sm font-medium">Priority</label><select value={data.priority} onChange={e=>setData('priority', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
                 </div>

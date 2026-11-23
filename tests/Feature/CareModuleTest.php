@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Hospital;
 use App\Models\SuiteNotification;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Modules\Care\Models\CareLabImage;
 use App\Modules\Care\Models\CareLabOrder;
@@ -312,6 +313,28 @@ class CareModuleTest extends TestCase
         $this->actingAs($portalUser)->get('/portal?patient_id=999999')->assertNotFound();
 
         $this->assertSame(0, CarePatient::where('linked_user_id', $portalUser->id)->count());
+    }
+
+    public function test_portal_registration_validates_superadmin_managed_options(): void
+    {
+        $hospital = $this->hospital();
+        $portalUser = $this->userWithRoles($hospital, 'Patient');
+        $patient = CarePatient::factory()->linkedTo($portalUser)->create([
+            'hospital_id' => $hospital->id,
+        ]);
+        SystemSetting::setValue('care_registration_categories', "military\ndependant");
+        SystemSetting::setValue('care_registration_relationships', 'sponsor');
+
+        $this->actingAs($portalUser)->post('/portal/registrations', [
+            'patient_id' => $patient->id,
+            'category' => 'civilian',
+        ])->assertSessionHasErrors('category');
+
+        $this->actingAs($portalUser)->post('/portal/registrations', [
+            'patient_id' => $patient->id,
+            'category' => 'military',
+            'relationship' => 'friend',
+        ])->assertSessionHasErrors('relationship');
     }
 
     public function test_user_without_care_workspace_permission_cannot_open_care_module(): void

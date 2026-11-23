@@ -1,19 +1,29 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import Layout from '../../../Components/Layout';
 import PageHeader from '../../../Components/ui/PageHeader';
 import StatusBadge from '../../../Components/ui/StatusBadge';
 import EmptyState from '../../../Components/ui/EmptyState';
 
 export default function Registrations({ patient, registrations }) {
-    const form = useForm({ category: patient.category || 'military', sponsor_id: '', relationship: '' });
+    const { options } = usePage().props;
+    const categories = options?.care_registration_categories || [];
+    const relationships = options?.care_registration_relationships || [];
+    const defaultCategory = categories.includes(patient.category) ? patient.category : (categories[0] || '');
+    const form = useForm({ category: defaultCategory, sponsor_id: '', relationship: '' });
 
     return (
         <Layout>
             <PageHeader title="My Registrations" subtitle="Submit a registration for care network review" />
             <form onSubmit={(e) => { e.preventDefault(); form.post('/portal/registrations'); }} className="bg-white border rounded-xl p-4 mt-5 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
-                <input className="border rounded px-3 py-2" placeholder="Category" value={form.data.category} onChange={(e) => form.setData('category', e.target.value)} />
+                <select className="border rounded px-3 py-2" value={form.data.category} onChange={(e) => form.setData('category', e.target.value)}>
+                    <option value="">Select category</option>
+                    {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                </select>
                 <input className="border rounded px-3 py-2" placeholder="Sponsor ID (optional)" value={form.data.sponsor_id} onChange={(e) => form.setData('sponsor_id', e.target.value)} />
-                <input className="border rounded px-3 py-2" placeholder="Relationship" value={form.data.relationship} onChange={(e) => form.setData('relationship', e.target.value)} />
+                <select className="border rounded px-3 py-2" value={form.data.relationship} onChange={(e) => form.setData('relationship', e.target.value)}>
+                    <option value="">No relationship</option>
+                    {relationships.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
+                </select>
                 <button className="bg-[#0b3d0b] text-white rounded px-3 py-2">Submit registration</button>
             </form>
             <div className="bg-white border rounded-xl mt-5 overflow-hidden">

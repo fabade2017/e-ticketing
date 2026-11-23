@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\SystemSetting;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,5 +93,31 @@ class GridSearchTest extends TestCase
                 ->has('articles.data', 0)
                 ->where('filters.search', 'nonexistent-term')
             );
+    }
+
+    public function test_kb_rejects_category_outside_superadmin_option_list(): void
+    {
+        $admin = User::where('email', 'superadmin@army.mil.ng')->first();
+        SystemSetting::setValue('kb_categories', "general\nguidance");
+
+        $this->actingAs($admin)->post('/kb', [
+            'title' => 'Legacy guidance',
+            'category' => 'logistics',
+            'body' => 'Should be rejected.',
+        ])->assertSessionHasErrors('category');
+    }
+
+    public function test_user_crud_rejects_rank_outside_superadmin_option_list(): void
+    {
+        $admin = User::where('email', 'superadmin@army.mil.ng')->first();
+        SystemSetting::setValue('user_ranks', "Pte\nSgt");
+
+        $this->actingAs($admin)->post('/admin/users/crud', [
+            'name' => 'Rank Test',
+            'email' => 'rank.test@army.mil.ng',
+            'service_number' => 'NA/RT/999',
+            'rank' => 'General',
+            'role' => 'Soldier',
+        ])->assertSessionHasErrors('rank');
     }
 }

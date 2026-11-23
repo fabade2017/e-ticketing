@@ -1,11 +1,13 @@
-import { useForm, router } from '@inertiajs/react';
+import { useForm, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Layout from '../../Components/Layout';
 import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function KbIndex({ articles, filters, canManage }) {
+    const { options } = usePage().props;
+    const categories = options?.kb_categories || [];
     const [search, setSearch] = useState(filters?.search || '');
-    const { data, setData, post, processing } = useForm({ title:'', category:'general', body:'' });
+    const { data, setData, post, processing } = useForm({ title:'', category: categories[0] || 'general', body:'' });
     const applyFilters = (next) => router.get('/kb', { search: next.search }, {
         preserveState: true,
         preserveScroll: true,
@@ -25,7 +27,9 @@ export default function KbIndex({ articles, filters, canManage }) {
             {canManage && (
                 <form onSubmit={e=>{e.preventDefault(); post('/kb');}} className="bg-white border rounded-xl p-4 mt-4 space-y-2">
                     <input value={data.title} onChange={e=>setData('title',e.target.value)} placeholder="Title" className="w-full border rounded px-3 py-2" />
-                    <input value={data.category} onChange={e=>setData('category',e.target.value)} placeholder="Category" className="w-full border rounded px-3 py-2" />
+                    <select value={data.category} onChange={e=>setData('category',e.target.value)} className="w-full border rounded px-3 py-2">
+                        {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                    </select>
                     <textarea value={data.body} onChange={e=>setData('body',e.target.value)} placeholder="Body" rows={3} className="w-full border rounded px-3 py-2" />
                     <button disabled={processing} className="bg-[#0b3d0b] text-white px-4 py-2 rounded">Add Article</button>
                 </form>

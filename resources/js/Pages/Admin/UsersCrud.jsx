@@ -4,11 +4,12 @@ import Layout from '../../Components/Layout';
 import useLiveFilters from '../../hooks/useLiveFilters';
 
 export default function UsersCrud({ users, roles, departments, filters }) {
-    const { flash } = usePage().props;
+    const { flash, options } = usePage().props;
+    const ranks = options?.user_ranks || [];
     const [editing, setEditing] = useState(null);
     const [showCreate, setShowCreate] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
-    const createForm = useForm({ name:'', email:'', service_number:'', rank:'', unit:'', department_id:'', phone:'', role: roles[0]||'Soldier', password:'' });
+    const createForm = useForm({ name:'', email:'', service_number:'', rank: ranks[0] || '', unit:'', department_id:'', phone:'', role: roles[0]||'Soldier', password:'' });
     const editForm = useForm({ name:'', email:'', service_number:'', rank:'', unit:'', department_id:'', phone:'', role:'', is_active:true, password:'' });
 
     const startEdit = (u)=>{
@@ -45,7 +46,10 @@ export default function UsersCrud({ users, roles, departments, filters }) {
                     <input value={createForm.data.name} onChange={e=>createForm.setData('name',e.target.value)} placeholder="Name" className="border rounded px-3 py-2" />
                     <input value={createForm.data.email} onChange={e=>createForm.setData('email',e.target.value)} placeholder="Email" className="border rounded px-3 py-2" />
                     <input value={createForm.data.service_number} onChange={e=>createForm.setData('service_number',e.target.value)} placeholder="Service No NA/..." className="border rounded px-3 py-2" />
-                    <input value={createForm.data.rank} onChange={e=>createForm.setData('rank',e.target.value)} placeholder="Rank" className="border rounded px-3 py-2" />
+                    <select value={createForm.data.rank} onChange={e=>createForm.setData('rank',e.target.value)} className="border rounded px-3 py-2">
+                        <option value="">Rank</option>
+                        {ranks.map((rank) => <option key={rank} value={rank}>{rank}</option>)}
+                    </select>
                     <input value={createForm.data.unit} onChange={e=>createForm.setData('unit',e.target.value)} placeholder="Unit" className="border rounded px-3 py-2" />
                     <select value={createForm.data.department_id} onChange={e=>createForm.setData('department_id',e.target.value)} className="border rounded px-3 py-2">
                         <option value="">Department</option>{Object.entries(departments).map(([id,name])=> <option key={id} value={id}>{name}</option>)}

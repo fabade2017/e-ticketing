@@ -3,14 +3,29 @@ import { useState } from 'react';
 import Layout from '../../Components/Layout';
 import FaceAuth from '../../Components/FaceAuth';
 
+const optionFields = [
+    ['ticket_categories', 'Ticket categories'],
+    ['care_registration_categories', 'Care registration categories'],
+    ['care_registration_relationships', 'Care registration relationships'],
+    ['kb_categories', 'Knowledge Base categories'],
+    ['supply_units', 'Supply units'],
+    ['user_ranks', 'User ranks'],
+];
+
 export default function Settings({ settings }) {
+    const { flash, options } = usePage().props;
     const { data, setData, post, processing } = useForm({
         face_auth_mode: settings.face_auth_mode || 'local',
         face_auth_enabled: settings.face_auth_enabled,
         cloud_provider: settings.face_cloud_provider || 'aws',
     });
+    const optionForm = useForm(Object.fromEntries(optionFields.map(([key]) => [
+        key,
+        (options?.[key] || []).join('\n'),
+    ])));
     const [enrollUserId, setEnrollUserId] = useState('');
     const submit = e => { e.preventDefault(); post('/admin/settings/face'); };
+    const saveOptions = e => { e.preventDefault(); optionForm.post('/admin/settings/options'); };
 
     const handleEnroll = async (embedding, image) => {
         if (!enrollUserId) { alert('Enter User ID to enroll'); return; }
@@ -46,6 +61,28 @@ export default function Settings({ settings }) {
                 )}
                 <div className="text-xs text-slate-500">Threshold: {settings.threshold} • Liveness required • Embeddings stored encrypted</div>
                 <button disabled={processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">Save Settings (SuperAdmin)</button>
+            </form>
+
+            {flash?.success && <div className="bg-green-50 border border-green-200 p-2 rounded mt-4 max-w-2xl text-sm">{flash.success}</div>}
+
+            <form onSubmit={saveOptions} className="bg-white border rounded-xl p-6 mt-6 max-w-2xl space-y-4">
+                <div>
+                    <h2 className="text-lg font-semibold">Dropdown options</h2>
+                    <p className="text-xs text-slate-500">SuperAdmin controls the values shown in dropdowns. Enter one option per line or separate with commas.</p>
+                </div>
+                {optionFields.map(([key, label]) => (
+                    <div key={key}>
+                        <label className="text-sm font-medium">{label}</label>
+                        <textarea
+                            rows={3}
+                            value={optionForm.data[key]}
+                            onChange={e => optionForm.setData(key, e.target.value)}
+                            className="w-full border rounded px-3 py-2 mt-1 text-sm"
+                        />
+                        {optionForm.errors[key] && <p className="text-red-600 text-xs mt-1">{optionForm.errors[key]}</p>}
+                    </div>
+                ))}
+                <button disabled={optionForm.processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">Save Dropdown Options</button>
             </form>
 
             <div className="mt-8 max-w-2xl">

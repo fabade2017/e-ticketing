@@ -30,6 +30,8 @@ class SuiteDashboardTest extends TestCase
                 ->component('Dashboard')
                 ->where('suite.current_hospital.code', 'LMH')
                 ->where('suite.modules', fn ($modules) => collect($modules)->pluck('key')->contains('ticketing'))
+                ->where('suite.rooms', fn ($rooms) => collect($rooms)->pluck('key')->all() === ['ticketing'])
+                ->where('suite.rooms', fn ($rooms) => collect(data_get($rooms, '0.menus', []))->pluck('label')->contains('All Tickets'))
                 ->where('suiteInsights.0.key', 'ticketing')
             );
     }
@@ -44,6 +46,8 @@ class SuiteDashboardTest extends TestCase
                 ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('maintenance'))
                 ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care'))
                 ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care-portal'))
+                ->where('suite.rooms', fn ($rooms) => collect($rooms)->pluck('key')->all() === ['ticketing'])
+                ->where('suite.rooms', fn ($rooms) => ! collect(data_get($rooms, '0.menus', []))->pluck('label')->contains('All Tickets'))
             );
     }
 
@@ -74,6 +78,55 @@ class SuiteDashboardTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('suite.modules', fn ($modules) => collect($modules)->pluck('key')->contains('care-portal'))
                 ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care'))
+            );
+    }
+
+    public function test_care_room_shows_workspace_or_portal_menus_based_on_role(): void
+    {
+        $hospital = Hospital::first();
+        $reception = User::factory()->create(['current_hospital_id' => $hospital->id]);
+        $reception->assignRole('Reception');
+        $patient = User::factory()->create(['current_hospital_id' => $hospital->id]);
+        $patient->assignRole('Patient');
+
+        $this->actingAs($reception->fresh())->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('suite.rooms', fn ($rooms) => collect($rooms)->pluck('key')->contains('care'))
+                ->where('suite.rooms', fn ($rooms) => collect(data_get(collect($rooms)->firstWhere('key', 'care'), 'menus', []))->pluck('label')->contains('Registrations'))
+                ->where('suite.rooms', fn ($rooms) => ! collect(data_get(collect($rooms)->firstWhere('key', 'care'), 'menus', []))->pluck('label')->contains('Patient Dashboard'))
+            );
+
+        $this->actingAs($patient->fresh())->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('suite.rooms', fn ($rooms) => collect($rooms)->pluck('key')->contains('care'))
+                ->where('suite.rooms', fn ($rooms) => collect(data_get(collect($rooms)->firstWhere('key', 'care'), 'menus', []))->pluck('label')->contains('Patient Dashboard'))
+                ->where('suite.rooms', fn ($rooms) => ! collect(data_get(collect($rooms)->firstWhere('key', 'care'), 'menus', []))->pluck('label')->contains('Registrations'))
+            );
+    }
+
+    public function test_maintenance_and_supply_rooms_are_exposed_to_their_roles(): void
+    {
+        $hospital = Hospital::first();
+        $technician = User::factory()->create(['current_hospital_id' => $hospital->id]);
+        $technician->assignRole('MaintenanceTech');
+        $warehouse = User::factory()->create(['current_hospital_id' => $hospital->id]);
+        $warehouse->assignRole('WarehouseManager');
+
+        $this->actingAs($technician->fresh())->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('suite.rooms', fn ($rooms) => collect($rooms)->pluck('key')->contains('maintenance'))
+                ->where('suite.rooms', fn ($rooms) => ! collect($rooms)->pluck('key')->contains('supply'))
+            );
+
+        $this->actingAs($warehouse->fresh())->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('suite.rooms', fn ($rooms) => collect($rooms)->pluck('key')->contains('supply'))
+                ->where('suite.rooms', fn ($rooms) => ! collect($rooms)->pluck('key')->contains('maintenance'))
+                ->where('suite.rooms', fn ($rooms) => collect(data_get(collect($rooms)->firstWhere('key', 'supply'), 'menus', []))->pluck('label')->contains('Stock Approvals'))
             );
     }
 

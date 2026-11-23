@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Hospital;
 use App\Models\SuiteNotification;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Modules\Supply\Models\SupplyApprovalRequest;
 use App\Modules\Supply\Models\SupplyGoodsReceived;
@@ -175,6 +176,23 @@ class SupplyModuleTest extends TestCase
         ])->assertSessionHasErrors('supply_item_category_id');
 
         $this->assertDatabaseMissing('supply_items', ['sku' => 'SKU-CATEGORY-2']);
+    }
+
+    public function test_new_item_rejects_unit_outside_superadmin_option_list(): void
+    {
+        $hospital = $this->hospital();
+        $user = $this->moduleUser('WarehouseManager', $hospital);
+        $category = SupplyItemCategory::factory()->create();
+        SystemSetting::setValue('supply_units', "each\nbox");
+
+        $this->actingAs($user)->post('/supply/items', [
+            'name' => 'Disposable apron',
+            'sku' => 'SKU-UNIT-1',
+            'supply_item_category_id' => $category->id,
+            'unit' => 'pcs',
+        ])->assertSessionHasErrors('unit');
+
+        $this->assertDatabaseMissing('supply_items', ['sku' => 'SKU-UNIT-1']);
     }
 
     private function hospital(): Hospital

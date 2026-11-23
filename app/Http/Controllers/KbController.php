@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\KbArticle;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class KbController extends Controller
@@ -33,7 +35,11 @@ class KbController extends Controller
         if (! auth()->user()->hasAnyRole(['SuperAdmin', 'Admin'])) {
             abort(403);
         }
-        $request->validate(['title' => 'required|string', 'category' => 'required|string', 'body' => 'required|string']);
+        $request->validate([
+            'title' => 'required|string',
+            'category' => ['required', Rule::in(SystemSetting::options('kb_categories'))],
+            'body' => 'required|string',
+        ]);
         KbArticle::create(['title' => $request->title, 'category' => $request->category, 'body' => $request->body, 'created_by' => auth()->id()]);
 
         return back()->with('success', 'Article created');

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\SystemSetting;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\User;
@@ -192,5 +193,15 @@ class AnonymousTicketTest extends TestCase
             ->assertJsonPath('ticket.is_anonymous', false)
             ->assertJsonPath('ticket.user_id', $soldier->id)
             ->assertJsonPath('ticket.unit', $soldier->unit);
+    }
+
+    public function test_ticket_category_is_validated_against_superadmin_option_list(): void
+    {
+        Sanctum::actingAs($this->soldier());
+        SystemSetting::setValue('ticket_categories', "welfare\nsecurity");
+
+        $this->postJson('/api/tickets', $this->payload(['category' => 'medical']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('category');
     }
 }

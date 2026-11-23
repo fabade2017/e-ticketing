@@ -72,6 +72,7 @@ class HandleInertiaRequests extends Middleware
                 'face_auth_mode' => $settings['face_auth_mode'],
                 'face_auth_enabled' => $settings['face_auth_enabled'] === '1',
             ],
+            'options' => fn () => SystemSetting::optionLists(),
             'branding' => [
                 'app_name' => $settings['app_name'],
                 'app_motto' => $settings['app_motto'],
@@ -81,6 +82,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'suite' => [
                 'modules' => fn () => (new SuiteNavigation)->modulesFor($request->user()),
+                'rooms' => fn () => (new SuiteNavigation)->roomsFor($request->user()),
                 'current_hospital' => fn () => $request->user()?->currentHospital ? [
                     'id' => $request->user()->currentHospital->id,
                     'name' => $request->user()->currentHospital->name,

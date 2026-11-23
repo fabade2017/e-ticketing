@@ -2,11 +2,12 @@ import { Link, usePage } from '@inertiajs/react';
 import { lazy, Suspense, useState } from 'react';
 import Layout from '../Components/Layout';
 import StatCard from '../Components/ui/StatCard';
+import SuiteRooms from '../Components/SuiteRooms';
 
 const DashboardCharts = lazy(() => import('../Components/DashboardCharts'));
 
 export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll, suiteInsights }) {
-    const { auth, branding } = usePage().props;
+    const { auth, branding, suite } = usePage().props;
     const appName = branding?.app_name || 'NA E-Ticket';
     const isSoldier = stats?.isSoldier;
     const roles = auth.user?.roles || [];
@@ -51,6 +52,7 @@ export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll, 
                         </div>
                     ))}
                 </div>
+                <SuiteRooms rooms={suite?.rooms} insights={suiteInsights} />
                 <div className="mt-6 grid md:grid-cols-2 gap-4">
                     <Link href="/tickets/create" className="bg-[#0b3d0b] text-white p-8 rounded-xl font-semibold block text-center text-lg">+ Create New Ticket<br/><span className="text-xs font-normal opacity-80">Works offline — queues when no signal</span></Link>
                     <Link href="/tickets" className="bg-white border p-8 rounded-xl font-semibold block text-center">My Tickets →<br/><span className="text-xs font-normal text-slate-500">Track your requests</span></Link>
@@ -93,6 +95,8 @@ export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll, 
                 </div>
                 <Link href="/officers" className="bg-[#0b3d0b] text-white px-4 py-2 rounded text-sm hidden md:block">View Officers & Faces →</Link>
             </div>
+
+            <SuiteRooms rooms={suite?.rooms} insights={suiteInsights} />
 
             {(suiteInsights || []).length > 0 && (
                 <div className="mt-6">

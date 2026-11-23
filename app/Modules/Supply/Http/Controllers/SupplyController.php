@@ -4,6 +4,7 @@ namespace App\Modules\Supply\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hospital;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Modules\Supply\Models\SupplyApprovalRequest;
 use App\Modules\Supply\Models\SupplyBatch;
@@ -90,7 +91,7 @@ class SupplyController extends Controller
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:100|unique:supply_items,sku',
             'supply_item_category_id' => ['required', 'integer', Rule::exists('supply_item_categories', 'id')->where('is_active', true)],
-            'unit' => 'required|string|max:50',
+            'unit' => ['required', Rule::in(SystemSetting::options('supply_units'))],
             'description' => 'nullable|string',
         ]);
 

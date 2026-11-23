@@ -4,6 +4,7 @@ namespace App\Modules\Care\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Hospital;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Modules\Care\Models\CareLabResult;
 use App\Modules\Care\Models\CarePatient;
@@ -15,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -54,9 +56,9 @@ class CarePortalController extends Controller
     {
         $validated = $request->validate([
             'patient_id' => ['sometimes', 'integer', 'exists:care_patients,id'],
-            'category' => ['required', 'string', 'max:50'],
+            'category' => ['required', Rule::in(SystemSetting::options('care_registration_categories'))],
             'sponsor_id' => ['nullable', 'integer', 'exists:care_patient_sponsors,id'],
-            'relationship' => ['nullable', 'string', 'max:50'],
+            'relationship' => ['nullable', Rule::in(SystemSetting::options('care_registration_relationships'))],
         ]);
 
         $patient = $this->resolvePatient($request);

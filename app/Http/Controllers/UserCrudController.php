@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -46,7 +48,7 @@ class UserCrudController extends Controller
             'name' => 'required|string|max:100',
             'email' => 'required|email|unique:users,email',
             'service_number' => 'required|string|unique:users,service_number',
-            'rank' => 'nullable|string',
+            'rank' => ['nullable', Rule::in(SystemSetting::options('user_ranks'))],
             'unit' => 'nullable|string',
             'department_id' => 'nullable|exists:departments,id',
             'phone' => 'nullable|string',
@@ -71,7 +73,8 @@ class UserCrudController extends Controller
         $request->validate([
             'name' => 'required|string', 'email' => 'required|email|unique:users,email,'.$user->id,
             'service_number' => 'required|string|unique:users,service_number,'.$user->id,
-            'rank' => 'nullable|string', 'unit' => 'nullable|string', 'department_id' => 'nullable|exists:departments,id',
+            'rank' => ['nullable', Rule::in(array_values(array_unique(array_filter([...SystemSetting::options('user_ranks'), $user->rank]))))],
+            'unit' => 'nullable|string', 'department_id' => 'nullable|exists:departments,id',
             'phone' => 'nullable|string', 'role' => 'required|exists:roles,name', 'is_active' => 'boolean',
         ]);
         $user->update($request->only('name', 'email', 'service_number', 'rank', 'unit', 'department_id', 'phone', 'is_active'));

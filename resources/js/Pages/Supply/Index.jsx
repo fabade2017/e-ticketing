@@ -6,12 +6,13 @@ import StatusBadge from '../../Components/ui/StatusBadge';
 import EmptyState from '../../Components/ui/EmptyState';
 
 export default function Index({ balances, items, categories, approvals, insights, filters, canSeeAll, isAll, currentHospital }) {
-    const { auth } = usePage().props;
+    const { auth, options } = usePage().props;
+    const units = options?.supply_units || [];
     const canManageCategories = auth?.user?.roles?.some((role) => role === 'Admin' || role === 'SuperAdmin');
     const receive = useForm({ item_id: '', quantity: '', supplier: '', document_no: '', batch_code: '', expires_on: '', idempotency_key: '' });
     const issue = useForm({ item_id: '', quantity: '', recipient_type: 'unit', recipient_id: '', purpose: '', idempotency_key: '' });
     const reconcile = useForm({ item_id: '', expected_quantity: '', counted_quantity: '', notes: '', idempotency_key: '' });
-    const newItem = useForm({ name: '', sku: '', supply_item_category_id: '', unit: 'pcs', description: '' });
+    const newItem = useForm({ name: '', sku: '', supply_item_category_id: '', unit: units[0] || 'pcs', description: '' });
 
     return (
         <Layout>
@@ -83,7 +84,9 @@ export default function Index({ balances, items, categories, approvals, insights
                                 <option value="">Select category</option>
                                 {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                             </select>
-                            <input className="w-full border rounded px-2 py-2 text-sm" placeholder="Unit" value={newItem.data.unit} onChange={(e) => newItem.setData('unit', e.target.value)} />
+                            <select className="w-full border rounded px-2 py-2 text-sm" value={newItem.data.unit} onChange={(e) => newItem.setData('unit', e.target.value)}>
+                                {units.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                            </select>
                             {Object.values(newItem.errors).map((error, index) => <p key={index} className="text-red-600 text-xs">{error}</p>)}
                             <button disabled={newItem.processing} className="w-full border rounded py-2 text-sm">Add item</button>
                         </div>

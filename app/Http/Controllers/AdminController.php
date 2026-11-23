@@ -171,6 +171,25 @@ class AdminController extends Controller
         ]);
     }
 
+    public function updateOptions(Request $request)
+    {
+        if (! auth()->user()->hasRole('SuperAdmin')) {
+            abort(403);
+        }
+
+        $rules = collect(SystemSetting::OPTION_LISTS)
+            ->mapWithKeys(fn (array $defaults, string $key): array => [$key => 'required|string|max:2000'])
+            ->all();
+
+        $validated = $request->validate($rules);
+
+        foreach ($validated as $key => $value) {
+            SystemSetting::setValue($key, implode(PHP_EOL, SystemSetting::parseOptions($value)));
+        }
+
+        return back()->with('success', 'Dropdown options updated.');
+    }
+
     public function updateUserRole(Request $request, User $user)
     {
         if (! auth()->user()->hasRole('SuperAdmin')) {
