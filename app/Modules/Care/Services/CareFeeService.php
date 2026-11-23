@@ -2,17 +2,12 @@
 
 namespace App\Modules\Care\Services;
 
+use App\Models\SystemSetting;
 use App\Modules\Care\Models\CarePatient;
 use Carbon\Carbon;
 
 class CareFeeService
 {
-    public const MILITARY_FEE = 5000;
-
-    public const CIVILIAN_FEE = 10000;
-
-    public const DEPENDANT_FEE = 2500;
-
     public function quote(CarePatient $patient, array $attributes = []): array
     {
         $category = (string) ($attributes['category'] ?? $patient->category);
@@ -62,10 +57,8 @@ class CareFeeService
 
     private function baseFee(string $category): float
     {
-        return match ($category) {
-            'military' => self::MILITARY_FEE,
-            'dependant' => self::DEPENDANT_FEE,
-            default => self::CIVILIAN_FEE,
-        };
+        $fees = SystemSetting::careFees();
+
+        return $fees[$category] ?? $fees['civilian'];
     }
 }

@@ -68,6 +68,7 @@ see another patient's clinical history, even if both are linked to the same hosp
 | A mobile Care/Maintenance/Supply menu opens a browser | Expected. Those modules are web-first; use the web dashboard until native screens ship. |
 | The left sidebar looks collapsed | Click the module heading. Only one module stays open at a time by design. |
 | A dropdown choice is missing | Ask a SuperAdmin to edit Settings → Dropdown Options. Choices are now managed in the database. |
+| A care registration fee is wrong | Ask a SuperAdmin to edit Settings → Care Registration Fees. Existing registrations keep their recorded amounts. |
 | No signal and a ticket must be filed | Use the mobile app's New Ticket screen; it queues locally and syncs later. |
 | Web offline ticket queue does not replay | Not implemented yet; re-enter the ticket when online or use the mobile app queue. |
 | API URL errors in the mobile app | Check `soldier-app/app.json` → `expo.extra.apiUrl` for the build environment. |

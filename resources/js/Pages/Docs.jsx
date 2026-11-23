@@ -23,6 +23,7 @@ After import, the report lists success/skipped rows and links to the export file
         ['5. Tickets & Dropdown Options', `Priorities: low,medium,high,urgent | Statuses: open,in_progress,resolved,closed
 SLA: urgent 4h / high 12h / medium 24h / low 72h.
 SuperAdmin -> Settings -> Dropdown Options manages categories, relationships, KB categories, supply units and ranks.
+SuperAdmin -> Settings -> Care Registration Fees manages military, civilian and dependant base fees; existing registrations keep their recorded amounts.
 Web offline ticket form keeps a local draft but does not replay it yet.
 Mobile ticket creation queues offline and replays on Sync.`],
         ['6. Suite Navigation', `The dashboard shows permission-filtered rooms as expandable cards.
@@ -38,7 +39,7 @@ POST /login, GET /user, POST /logout, POST /logout-all
 GET /suite/modules, GET /suite/rooms, GET /suite/notifications
 GET /tickets/stats, GET /tickets, POST /tickets, GET /tickets/:id, PATCH /tickets/:id
 GET /chat/groups, GET /chat/unread, GET /chat/groups/:group/messages, POST /chat/groups/:group/messages
-GET /meta`],
+GET /meta (includes care_registration_fees)`],
         ['9. New User Story', `A soldier with no signal opens the app, expands the Ticketing room and taps New Ticket.
 The ticket is saved on the device and replays when Sync runs.
 A new admin sees one sidebar module open at a time; clicking another module collapses the previous one.

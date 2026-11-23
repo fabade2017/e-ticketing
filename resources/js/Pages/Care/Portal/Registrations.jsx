@@ -5,11 +5,12 @@ import StatusBadge from '../../../Components/ui/StatusBadge';
 import EmptyState from '../../../Components/ui/EmptyState';
 
 export default function Registrations({ patient, registrations }) {
-    const { options } = usePage().props;
+    const { options, careFees } = usePage().props;
     const categories = options?.care_registration_categories || [];
     const relationships = options?.care_registration_relationships || [];
     const defaultCategory = categories.includes(patient.category) ? patient.category : (categories[0] || '');
     const form = useForm({ category: defaultCategory, sponsor_id: '', relationship: '' });
+    const selectedFee = careFees?.[form.data.category];
 
     return (
         <Layout>
@@ -26,6 +27,9 @@ export default function Registrations({ patient, registrations }) {
                 </select>
                 <button className="bg-[#0b3d0b] text-white rounded px-3 py-2">Submit registration</button>
             </form>
+            <p className="text-xs text-slate-500 mt-2">
+                Standard fee: {selectedFee !== undefined ? `₦${Number(selectedFee).toLocaleString()}` : '—'}. Full waivers apply to approved military personnel, verified spouses and children under 18 in Lagos time.
+            </p>
             <div className="bg-white border rounded-xl mt-5 overflow-hidden">
                 {registrations.length ? registrations.map((item) => (
                     <div key={item.id} className="p-4 border-t flex justify-between text-sm">

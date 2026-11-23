@@ -13,7 +13,7 @@ See [../ONBOARDING_STORY.md](../ONBOARDING_STORY.md) for a guided first-day walk
 - `GET /api/suite/notifications` — unread suite notifications
 - `GET /api/tickets/stats`, `GET /api/tickets`, `POST /api/tickets`, `GET /api/tickets/:id`, `PATCH /api/tickets/:id`
 - `GET /api/chat/groups`, `GET /api/chat/unread`, `GET /api/chat/groups/:group/messages`, `POST /api/chat/groups/:group/messages`
-- `GET /api/meta`
+- `GET /api/meta` — includes categories plus managed `care_registration_fees`
 
 All endpoints except login/face verification require `Authorization: Bearer <token>`.
 

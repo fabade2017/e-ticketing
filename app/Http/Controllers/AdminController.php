@@ -167,6 +167,7 @@ class AdminController extends Controller
                 'face_auth_enabled' => SystemSetting::getValue('face_auth_enabled', '1') === '1',
                 'face_cloud_provider' => SystemSetting::getValue('face_cloud_provider', 'aws'),
                 'threshold' => config('face_auth.threshold'),
+                'care_fees' => SystemSetting::careFees(),
             ],
         ]);
     }
@@ -188,6 +189,25 @@ class AdminController extends Controller
         }
 
         return back()->with('success', 'Dropdown options updated.');
+    }
+
+    public function updateCareFees(Request $request)
+    {
+        if (! auth()->user()->hasRole('SuperAdmin')) {
+            abort(403);
+        }
+
+        $rules = collect(SystemSetting::CARE_FEES)
+            ->mapWithKeys(fn (string $default, string $key): array => [$key => 'required|numeric|min:0|max:100000000'])
+            ->all();
+
+        $validated = $request->validate($rules);
+
+        foreach ($validated as $key => $value) {
+            SystemSetting::setValue($key, number_format((float) $value, 2, '.', ''));
+        }
+
+        return back()->with('success', 'Care registration fees updated.');
     }
 
     public function updateUserRole(Request $request, User $user)

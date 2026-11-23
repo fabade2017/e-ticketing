@@ -73,6 +73,7 @@ class HandleInertiaRequests extends Middleware
                 'face_auth_enabled' => $settings['face_auth_enabled'] === '1',
             ],
             'options' => fn () => SystemSetting::optionLists(),
+            'careFees' => fn () => SystemSetting::careFees(),
             'branding' => [
                 'app_name' => $settings['app_name'],
                 'app_motto' => $settings['app_motto'],

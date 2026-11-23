@@ -130,7 +130,7 @@ Tables: `care_patients`, `care_patient_sponsors`, `care_registrations`, `care_do
 Rules from the guide to encode:
 
 - Registration review requires identity/evidence checks; a military sponsor must be approved before dependants.
-- Fee waiver: approved military personnel; spouse/child under 18 after checks; child 18+ pays full fee in Lagos time; civilian charges apply. Accounts verifies actual credit, not just an uploaded receipt.
+- Base registration fees are managed by SuperAdmin under Settings → Care Registration Fees (military, civilian and dependant). Fee waiver: approved military personnel; spouse/child under 18 after checks; child 18+ pays full fee in Lagos time; civilian charges apply. Accounts verifies actual credit, not just an uploaded receipt. Existing registrations keep their recorded amounts.
 - Appointment requests are not bookings until Reception confirms.
 - Only published consultation summaries are visible to the patient; internal notes, lab images and staff reports stay private.
 - Lab results: written findings plus up to three JPG/PNG attachments at 5 MB each. Uploads validated by MIME and size, stored via `Storage` outside public execution.
@@ -183,6 +183,7 @@ Keep integrations explicit and narrow:
 ## 7. API and mobile
 
 - `routes/api.php` exposes `/api/suite/modules`, `/api/suite/rooms` and `/api/suite/notifications` for the soldier app's home screen. Rooms are permission-filtered by `SuiteNavigation::roomsFor()`.
+- Managed base fees are shared with Inertia pages as `careFees` and returned by `GET /api/meta` as `care_registration_fees`; no separate fee-fetch API was specified in the source planning docs.
 - Later API additions follow the existing Sanctum Bearer-token convention and `auth:sanctum` middleware group (`routes/api.php`).
 - The mobile dashboard renders expandable room cards with the same one-open behavior as the web dashboard. Ticketing menus open native screens; other module menus open the web dashboard in the device browser until native screens are built.
 - `soldier-app/src/api/client.js` reads `expo.extra.apiUrl` from `soldier-app/app.json`, which is the single source of truth. Verify that value for each build environment.
@@ -204,7 +205,7 @@ Keep integrations explicit and narrow:
 
 **Phase 3 — Care**
 - Portal registration/appointments/results, staff workspaces, clinical flows, records/duty certificates, referrals, monthly reports.
-- Acceptance: permission matrix tests cover patient vs sponsor vs each staff role; waiver boundary, certificate lifecycle and report definitions are tested.
+- Acceptance: permission matrix tests cover patient vs sponsor vs each staff role; managed-fee quote updates, waiver boundary, certificate lifecycle and report definitions are tested.
 
 **Phase 4 — Unified insights and mobile**
 - Suite reports/workbooks, AI questions, mobile module navigation and API fixes.

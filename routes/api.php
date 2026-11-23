@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'sla_hours' => Ticket::SLA_HOURS,
             'departments' => Department::select('id', 'name')->get(),
             'states' => array_keys(Ticket::distinct()->pluck('state', 'state')->toArray()) ?: [], // fallback
+            'care_registration_fees' => SystemSetting::careFees(),
         ]);
     })->name('api.meta');
 });

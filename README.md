@@ -58,6 +58,8 @@ credentials; replace all default passwords before any non-local deployment.
 3. **Open a module menu on mobile** — expand a room card, then tap a menu. Non-ticketing menus open the web app.
 4. **Change dropdown choices** — SuperAdmin can edit ticket categories, care registration categories,
    relationships, KB categories, supply units and ranks under Settings → Dropdown Options.
+5. **Change care registration fees** — SuperAdmin can set military, civilian and dependant fees under
+   Settings → Care Registration Fees. Existing registrations keep their recorded amounts.
 
 ## API endpoints used by the mobile app
 
@@ -68,7 +70,7 @@ All endpoints are under `/api` and use Sanctum Bearer tokens except login/face v
 - `GET /suite/modules`, `GET /suite/rooms`, `GET /suite/notifications`
 - `GET /tickets/stats`, `GET /tickets`, `POST /tickets`, `GET /tickets/{ticket}`, `PATCH /tickets/{ticket}`
 - `GET /chat/groups`, `GET /chat/unread`, `GET /chat/groups/{group}/messages`, `POST /chat/groups/{group}/messages`
-- `GET /meta`
+- `GET /meta` (includes managed `care_registration_fees`)
 
 ## Verification
 

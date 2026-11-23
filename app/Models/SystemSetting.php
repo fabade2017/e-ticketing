@@ -16,6 +16,18 @@ class SystemSetting extends Model
         'user_ranks' => ['Pte', 'Lance Cpl', 'Cpl', 'Sgt', 'Sgt Maj', 'WO1', 'WO2', '2nd Lt', 'Lt', 'Capt', 'Maj', 'Lt Col', 'Col'],
     ];
 
+    public const CARE_FEES = [
+        'care_military_fee' => '5000',
+        'care_civilian_fee' => '10000',
+        'care_dependant_fee' => '2500',
+    ];
+
+    public const CARE_FEE_CATEGORIES = [
+        'military' => 'care_military_fee',
+        'civilian' => 'care_civilian_fee',
+        'dependant' => 'care_dependant_fee',
+    ];
+
     protected $fillable = ['key', 'value', 'description'];
 
     public static function getValue(string $key, ?string $default = null): ?string
@@ -58,6 +70,31 @@ class SystemSetting extends Model
                 $key => static::parseOptions($stored[$key] ?? null) ?: $defaults,
             ])
             ->all();
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    public static function careFees(): array
+    {
+        $settings = static::values(array_values(static::CARE_FEE_CATEGORIES), static::CARE_FEES);
+
+        return collect(static::CARE_FEE_CATEGORIES)
+            ->mapWithKeys(fn (string $key, string $category): array => [
+                $category => static::parseCareFee($settings[$key] ?? null, (float) static::CARE_FEES[$key]),
+            ])
+            ->all();
+    }
+
+    private static function parseCareFee(?string $raw, float $default): float
+    {
+        if ($raw === null || trim($raw) === '') {
+            return $default;
+        }
+
+        $value = filter_var($raw, FILTER_VALIDATE_FLOAT);
+
+        return $value !== false && $value >= 0 ? (float) $value : $default;
     }
 
     /**

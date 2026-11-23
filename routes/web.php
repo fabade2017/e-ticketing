@@ -86,6 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/settings', [AdminController::class, 'settings'])->name('admin.settings');
         Route::post('/admin/settings/face', [FaceAuthController::class, 'settings'])->name('admin.settings.face');
         Route::post('/admin/settings/options', [AdminController::class, 'updateOptions'])->name('admin.settings.options');
+        Route::post('/admin/settings/fees', [AdminController::class, 'updateCareFees'])->name('admin.settings.fees');
 
         Route::get('/admin/users/bulk', [BulkUploadController::class, 'index'])->name('admin.users.bulk');
         Route::post('/admin/users/bulk', [BulkUploadController::class, 'store'])->name('admin.users.bulk.store');

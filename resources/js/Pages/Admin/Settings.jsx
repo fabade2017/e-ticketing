@@ -12,6 +12,12 @@ const optionFields = [
     ['user_ranks', 'User ranks'],
 ];
 
+const feeFields = [
+    ['care_military_fee', 'military', 'Military registration fee'],
+    ['care_civilian_fee', 'civilian', 'Civilian registration fee'],
+    ['care_dependant_fee', 'dependant', 'Dependant registration fee'],
+];
+
 export default function Settings({ settings }) {
     const { flash, options } = usePage().props;
     const { data, setData, post, processing } = useForm({
@@ -23,9 +29,14 @@ export default function Settings({ settings }) {
         key,
         (options?.[key] || []).join('\n'),
     ])));
+    const feeForm = useForm(Object.fromEntries(feeFields.map(([key, category]) => [
+        key,
+        settings.care_fees?.[category] ?? '',
+    ])));
     const [enrollUserId, setEnrollUserId] = useState('');
     const submit = e => { e.preventDefault(); post('/admin/settings/face'); };
     const saveOptions = e => { e.preventDefault(); optionForm.post('/admin/settings/options'); };
+    const saveFees = e => { e.preventDefault(); feeForm.post('/admin/settings/fees'); };
 
     const handleEnroll = async (embedding, image) => {
         if (!enrollUserId) { alert('Enter User ID to enroll'); return; }
@@ -83,6 +94,28 @@ export default function Settings({ settings }) {
                     </div>
                 ))}
                 <button disabled={optionForm.processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">Save Dropdown Options</button>
+            </form>
+
+            <form onSubmit={saveFees} className="bg-white border rounded-xl p-6 mt-6 max-w-2xl space-y-4">
+                <div>
+                    <h2 className="text-lg font-semibold">Care registration fees</h2>
+                    <p className="text-xs text-slate-500">Applies to new registrations and re-reviews. Existing records keep the amounts already recorded.</p>
+                </div>
+                {feeFields.map(([key, , label]) => (
+                    <div key={key}>
+                        <label className="text-sm font-medium">{label}</label>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={feeForm.data[key]}
+                            onChange={e => feeForm.setData(key, e.target.value)}
+                            className="w-full border rounded px-3 py-2 mt-1 text-sm"
+                        />
+                        {feeForm.errors[key] && <p className="text-red-600 text-xs mt-1">{feeForm.errors[key]}</p>}
+                    </div>
+                ))}
+                <button disabled={feeForm.processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">Save Care Registration Fees</button>
             </form>
 
             <div className="mt-8 max-w-2xl">
