@@ -1,84 +1,107 @@
 # NA E-Ticket — Soldier Mobile App (Expo React Native + Sanctum)
 
-Military-grade offline-capable app for soldiers. Connects to Laravel Sanctum API at `routes/api.php`.
+Offline-capable Android/iOS app for soldiers. It talks to the Laravel Sanctum API in `routes/api.php`.
+See [../ONBOARDING_STORY.md](../ONBOARDING_STORY.md) for a guided first-day walkthrough.
 
-## Backend already done
-- `POST /api/login` (service_number + password → Bearer token) `app/Http/Controllers/Api/AuthController.php:14`
-- `GET /api/user`, `POST /api/logout`
-- `GET/POST /api/tickets`, `GET /api/tickets/:id`, `PATCH /api/tickets/:id` (RBAC: soldier sees own only) `app/Http/Controllers/Api/TicketController.php:15`
-- `GET /api/tickets/stats`, `GET /api/chat/*`
-- Token storage via `HasApiTokens` at `app/Models/User.php:10`
+## API endpoints used here
 
-## Quick Start
+- `POST /api/login` — service number + password → Bearer token
+- `POST /api/face/verify` — face embedding verification
+- `GET /api/user`, `POST /api/logout`, `POST /api/logout-all`
+- `GET /api/suite/modules` — permitted module cards
+- `GET /api/suite/rooms` — permission-filtered rooms with their menu lists
+- `GET /api/suite/notifications` — unread suite notifications
+- `GET /api/tickets/stats`, `GET /api/tickets`, `POST /api/tickets`, `GET /api/tickets/:id`, `PATCH /api/tickets/:id`
+- `GET /api/chat/groups`, `GET /api/chat/unread`, `GET /api/chat/groups/:group/messages`, `POST /api/chat/groups/:group/messages`
+- `GET /api/meta`
+
+All endpoints except login/face verification require `Authorization: Bearer <token>`.
+
+## Quick start
+
 ```bash
 cd soldier-app
-npm install          # or yarn
-# 1. Set API URL for your network
-# Edit app.json -> expo.extra.apiUrl
-# For emulator: http://10.0.2.2:8004/api  (Android)
-# For device on LAN: http://192.168.x.x:8004/api
-# For prod: https://your-domain/api
-
+npm install
+# Edit app.json -> expo.extra.apiUrl for your environment
 npx expo start
-# Press a (Android emulator), i (iOS simulator), or scan QR with Expo Go
+# Press a (Android emulator), i (iOS simulator), or scan the QR with Expo Go
 ```
 
-## Test Credentials (from DatabaseSeeder.php)
-- Soldier: `NA/SL/003` / `Soldier@123` (role Soldier, unit Border Outpost A) — sees own tickets only
+`src/api/client.js` reads the API URL from `app.json`, so `expo.extra.apiUrl` is the single
+source of truth. Use your LAN address for a local backend, or the deployed HTTPS API URL
+for a device build.
+
+## Local demo credentials
+
+These come from `database/seeders/DatabaseSeeder.php` and are for local testing only.
+Replace them before any non-local deployment.
+
+- Soldier: `NA/SL/003` / `Soldier@123`
 - SuperAdmin: `NA/SA/001` / `Admin@123`
 - Admin: `NA/ADM/002` / `Admin@123`
 
-API quick test:
-```bash
-curl -X POST http://127.0.0.1:8004/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"service_number":"NA/SL/003","password":"Soldier@123","device_name":"soldier-phone"}'
+## Dashboard and suite rooms
 
-# Use token
-curl http://127.0.0.1:8004/api/tickets -H "Authorization: Bearer <token>"
-```
+The dashboard loads `GET /api/suite/rooms` and renders each permitted room as an expandable card.
+Opening one room collapses the others. Room menus are permission-filtered by the backend.
 
-## Offline (Military Field Requirement)
-- CreateTicket auto-queues to AsyncStorage when `!response` (no signal) via `src/api/client.js:queueTicket()`
-- Dashboard + Create screen have "Sync Offline Queue" → replays `POST /api/tickets` with `offline_created:true`
-- Pull-to-refresh on Tickets also triggers `syncQueue()` if desired (add to TicketsScreen)
-- SLA timers shown locally: urgent 4h / high 12h / medium 24h / low 72h (`Ticket.php:38`)
+Menu behavior:
 
-## Security (Military)
-- Token in `expo-secure-store` (Keychain/Keystore), not AsyncStorage plaintext
-- `is_active` checked at `Api/AuthController.php:16`; inactive = 401
-- Bearer token only, no cookies/CSRF. Logout revokes current token (`currentAccessToken()->delete()`)
-- RBAC enforced server-side — soldier cannot view/ patch others' tickets
+- `/tickets/create` opens the native Create Ticket screen.
+- Other `/tickets*` routes open the native Tickets screen.
+- Care, Maintenance, Supply and other module menus open the web dashboard in the device browser.
 
-## Build for Deployment (MDM / Internal Distribution)
+This is the current workaround until native screens exist for those modules.
+
+## Offline behavior
+
+- Create Ticket queues to AsyncStorage when the API is unreachable (`src/api/client.js` → `queueTicket()`).
+- Dashboard and Create screens expose Sync Offline Queue, which replays queued tickets when online.
+- SLA timers are shown locally: urgent 4h / high 12h / medium 24h / low 72h.
+- Offline login with PIN is available after a PIN is set on the device.
+
+## Security notes
+
+- Tokens are stored in `expo-secure-store` where available, with AsyncStorage fallback.
+- `is_active` is checked by `Api/AuthController`; inactive users receive 401.
+- Bearer tokens are used instead of cookies/CSRF.
+- RBAC is enforced server-side; soldiers can only see and patch their own tickets.
+
+## Build for deployment
+
 ```bash
 npm install -g eas-cli
 eas login
-eas build --platform android --profile preview  # APK for testing (internal)
-eas build --platform android --profile production # AAB for Play Store internal track
+eas build --platform android --profile preview     # APK for internal testing
+eas build --platform android --profile production  # AAB for store/internal track
 eas build --platform ios --profile preview
-# For classified networks: eas build --local (no Expo cloud)
 ```
 
-Configure `app.json` bundle IDs: `ng.mil.na.eticket.soldier` already set. Add signing in `eas.json`.
+Bundle IDs are configured in `app.json`; signing is configured in `eas.json`.
+For a local bundle check without EAS:
+
+```bash
+npx expo export --platform android --output-dir /tmp/soldier-app-export
+```
 
 ## Structure
+
 ```
 src/
-  api/client.js          # axios + token + offline queue
+  api/client.js          # axios, token storage, offline queue
   context/AuthContext.jsx # login/logout/me
   screens/
     LoginScreen.jsx
-    DashboardScreen.jsx   # stats + queue status
+    DashboardScreen.jsx   # stats, suite rooms, notifications, sync
     TicketsScreen.jsx     # own tickets, filters, SLA badges
-    CreateTicketScreen.jsx # offline queue
+    CreateTicketScreen.jsx # offline ticket queue
     TicketDetailScreen.jsx
   navigation/AppNavigator.jsx
 ```
 
-## Next TODO for Production
-- [ ] Change `app.json.extra.apiUrl` to HTTPS prod domain + `SANCTUM_STATEFUL_DOMAINS`
-- [ ] Add `expo-camera` for `POST /api/face/verify` (face embedding on-device)
-- [ ] Push via `expo-notifications` + FCM for SLA/assignment
-- [ ] Biometric `expo-local-authentication` before showing tickets
-- [ ] MDM config (Intune) for API_URL injection
+## Future work
+
+- Native Care, Maintenance and Supply screens.
+- Push notifications for SLA/assignment.
+- Biometric unlock before showing tickets.
+- MDM configuration for API URL injection.

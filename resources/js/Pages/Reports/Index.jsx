@@ -109,7 +109,7 @@ export default function ReportsIndex({ report, narrative, canGenerate, scope, is
                 <h3 className="font-bold">World-Class Benchmarks</h3>
                 <ul className="list-disc ml-5 text-sm text-slate-600 mt-2 space-y-1">
                     <li><b>NATO APP-6:</b> Hotspot mapping, J4 logistics audit for top unit.</li>
-                    <li><b>NIST 800-63:</b> 95% face enrollment for offline auth, liveness required.</li>
+                    <li><b>NIST 800-63:</b> Face enrollment target for offline auth; liveness checks are planned but not enabled in this build.</li>
                     <li><b>SLA:</b> Urgent 4h, High 12h — auto-escalate overdue, avg close &lt;12h is world-class.</li>
                     <li><b>Forecast:</b> 25% growth — pre-stage, QRF.</li>
                 </ul>

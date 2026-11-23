@@ -5,12 +5,12 @@ export default function Help() {
     return (
         <Layout>
             <h1 className="text-3xl font-bold text-[#0b3d0b]">Help — How NA E-Ticket Works</h1>
-            <p className="text-slate-600 mt-2">Role-based story of the Nigerian Army Support Ticketing Platform. Offline-first, Face-ID secured, RBAC governed.</p>
+            <p className="text-slate-600 mt-2">Role-based story of the Nigerian Army Support Suite. Suite rooms, collapsible module menus, offline mobile capture, Face ID and RBAC.</p>
 
             <div className="mt-6 grid md:grid-cols-3 gap-4">
                 <div className="bg-white p-5 rounded-xl border shadow-sm">
                     <h3 className="font-bold">1. The Field Reality</h3>
-                    <p className="text-sm text-slate-600 mt-2">Soldiers at border outposts often have no GSM signal. Instead of calling the HQ call centre (which fails), they open <b>NA E-Ticket</b> as a PWA — it works offline, queues the ticket locally, and syncs when any network (2G/Starlink) appears.</p>
+                    <p className="text-sm text-slate-600 mt-2">Soldiers at border outposts often have no GSM signal. Instead of calling the HQ call centre (which fails), they open the <b>soldier mobile app</b> — ticket creation queues locally and syncs when any network (2G/Starlink) appears. The web form keeps a draft offline but does not replay it yet.</p>
                 </div>
                 <div className="bg-white p-5 rounded-xl border shadow-sm">
                     <h3 className="font-bold">2. Face Identity</h3>
@@ -18,7 +18,7 @@ export default function Help() {
                 </div>
                 <div className="bg-white p-5 rounded-xl border shadow-sm">
                     <h3 className="font-bold">3. Accountability</h3>
-                    <p className="text-sm text-slate-600 mt-2">Every ticket gets <code>NA-YYYY-XXXXXXXX</code>, SLA timers, audit logs, and encrypted storage. Command sees transparent analytics, not phone logs.</p>
+                    <p className="text-sm text-slate-600 mt-2">Every ticket gets <code>NA-YYYY-XXXXXXXX</code>, SLA timers and a status history. Command sees transparent analytics, not phone logs.</p>
                 </div>
             </div>
 
@@ -47,7 +47,7 @@ export default function Help() {
                     <h3 className="font-bold">Step-by-Step (Soldier)</h3>
                     <ol className="list-decimal ml-5 text-sm text-slate-600 mt-3 space-y-1">
                         <li>Login: Service No <code>NA/SL/003</code> + Password or Face Verify (needs prior enrollment by Admin).</li>
-                        <li>Dashboard → Create Ticket → choose category/priority/location → Submit. If offline, it queues in browser.</li>
+                        <li>Mobile dashboard → Ticketing room → New Ticket → choose category/priority/location → Submit. If offline, it queues on the device and syncs later.</li>
                         <li>Track at Tickets → status updates via assignment.</li>
                         <li>When resolved, record stays for audit.</li>
                     </ol>
@@ -66,10 +66,10 @@ export default function Help() {
             <div className="mt-8 bg-white p-6 rounded-xl border">
                 <h3 className="font-bold">Security & Offline Notes</h3>
                 <ul className="list-disc ml-5 text-sm text-slate-600 mt-2 space-y-1">
-                    <li>Embeddings encrypted (AES-256 via Laravel cipher), not photos.</li>
+                    <li>Face embeddings are stored as numeric vectors, not photos. HTTPS protects data in transit.</li>
                     <li>RBAC via <code>spatie/laravel-permission</code> — every route guarded by <code>role</code> / <code>permission</code> middleware.</li>
-                    <li>PWA: tickets + auth state cached; sync uses background queue when online.</li>
-                    <li>Audit: who changed status, when, from which IP.</li>
+                    <li>Mobile app queues ticket creation offline and replays it with Sync. Web offline form keeps a draft; replay is not available yet.</li>
+                    <li>Audit: ticket history records who changed status and when.</li>
                 </ul>
                 <div className="mt-4 flex gap-3">
                     <Link href="/about" className="bg-[#0b3d0b] text-white px-4 py-2 rounded">About Project →</Link>

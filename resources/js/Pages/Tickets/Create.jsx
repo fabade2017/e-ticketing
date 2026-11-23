@@ -40,7 +40,7 @@ export default function Create({ departments, defaultDepartmentId }) {
     return (
         <Layout>
             <h1 className="text-2xl font-bold">Create Ticket</h1>
-            <p className="text-sm text-slate-500">For border/remote areas: form queues offline and syncs automatically.</p>
+            <p className="text-sm text-slate-500">For border/remote areas: the mobile app queues tickets offline and syncs on Sync. This web form keeps a local draft but does not replay it yet.</p>
             <form onSubmit={submit} className="bg-white border rounded-xl p-6 mt-6 space-y-4 max-w-2xl">
                 <div className={`flex items-center justify-between gap-3 border rounded-lg p-3 ${data.is_anonymous ? 'bg-amber-50 border-amber-300' : 'bg-slate-50'}`}>
                     <div>

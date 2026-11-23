@@ -14,7 +14,7 @@ const rows = [
     section: '§3 OBJ 1 — Streamline ticketing for soldiers & administrators',
     proposal: 'Seamless access & management for soldiers and admins',
     addressed: '✓ Fully',
-    evidence: 'Soldier: /tickets/create → offline queue at resources/js/Pages/Tickets/Create.jsx:18 (localStorage), My Tickets filtered by user_id. Admin: /tickets, /reports, /officers, assign/department/priority. Dashboard at app/Http/Controllers/AdminController.php:dashboard.',
+    evidence: 'Soldier: /tickets/create keeps a web draft in localStorage; the Expo app queues and syncs tickets offline. My Tickets filtered by user_id. Admin: /tickets, /reports, /officers, assign/department/priority. Dashboard at app/Http/Controllers/AdminController.php:dashboard.',
     link: '/dashboard',
     linkLabel: 'Dashboard →',
   },
@@ -30,7 +30,7 @@ const rows = [
     section: '§3 OBJ 3 — Secure, user-friendly, confidentiality',
     proposal: 'Secure & user-friendly, data confidentiality & integrity',
     addressed: '✓ Fully',
-    evidence: 'Auth: Service No + Password or Face ID 128-d embedding encrypted (User.php:face_embedding array, hashed password). Sanctum tokens at routes/api.php:10, Spatie RBAC middleware, AES-256. Tailwind responsive UI Layout.jsx:1 + SideMenu.',
+    evidence: 'Auth: Service No + password or Face ID 128-d embedding vectors (User.php:face_embedding), hashed passwords, Sanctum Bearer tokens and Spatie RBAC. HTTPS and deployment-configured encryption protect data in transit and at rest. Responsive UI via Layout.jsx and permission-filtered SideMenu.jsx.',
     link: '/login',
     linkLabel: 'Login →',
   },
@@ -38,7 +38,7 @@ const rows = [
     section: '§4–5 CURRENT CHALLENGES — Remote/border no GSM, delayed reporting',
     proposal: 'Border/remote outposts lack GSM → cannot call HQ; equipment/logistics/welfare go unreported or delayed',
     addressed: '✓ Fully — Core gap closed',
-    evidence: 'Offline-first: Create.jsx:18 queues to localStorage when !navigator.onLine + Soldier Expo app soldier-app/src/api/client.js:44 queueTicket()+syncQueue() (AsyncStorage). Location fields NIGERIA_STATES at Tickets/Create.jsx:37 (State/LGA) for remote outpost detail. Works on PWA/Expo with Starlink/2G later.',
+    evidence: 'Offline-first: web Create.jsx keeps a local draft when offline (replay not implemented yet); Soldier Expo app soldier-app/src/api/client.js queueTicket()+syncQueue() uses AsyncStorage and replays on reconnect. Location fields NIGERIA_STATES at Tickets/Create.jsx capture State/LGA for remote outpost detail. Works on PWA/Expo with Starlink/2G later.',
     link: '/tickets/create',
     linkLabel: 'Offline Ticket →',
   },
@@ -162,7 +162,7 @@ export default function ProposalCoverage() {
       </div>
 
       <div className="mt-6 bg-yellow-50 border border-yellow-200 p-5 rounded-xl text-sm">
-        <b>Gap Analysis — Only 1 Partial:</b> <code>§6 Integration — Live personnel DB sync</code> is DB-ready (bulk CSV + CRUD + Sanctum API) but not yet wired to Army HR API. This is intentional for Phase 3 — bulk upload at <Link href="/admin/users/bulk" className="underline">/admin/users/bulk</Link> proves the pipeline; replacing it with LDAP/REST connector is a 1-file change at <code>BulkUploadController.php</code>. All other 14 actions are fully live, including the critical border-offline gap at <code>resources/js/Pages/Tickets/Create.jsx:18</code> + <code>soldier-app/src/api/client.js:44</code>.
+        <b>Gap Analysis — 2 Partial:</b> <code>§6 Integration — Live personnel DB sync</code> is DB-ready (bulk CSV + CRUD + Sanctum API) but not yet wired to Army HR API. Bulk upload at <Link href="/admin/users/bulk" className="underline">/admin/users/bulk</Link> proves the pipeline; replacing it with an LDAP/REST connector is a contained change. Web offline ticket replay is also still pending; the mobile app at <code>soldier-app/src/api/client.js</code> covers border-offline capture and sync.
       </div>
 
       <div className="mt-6 flex gap-3">

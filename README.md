@@ -1,58 +1,100 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NA E-Ticketing Suite
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A single Laravel application for ticketing, care, maintenance and supply operations, with an
+Inertia/React web client and an offline-capable Expo mobile app for soldiers.
 
-## About Laravel
+## What is included
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Ticketing** — create, assign, track and report tickets with SLA timers, history and offline mobile capture.
+- **Care** — patient portal and staff workspace for registrations, appointments, visits, lab, billing and reports.
+- **Maintenance** — equipment, faults, work orders, preventive schedules and overdue alerts.
+- **Supply** — stock balances, batches, receipts, issues, reorder rules and approval workflows.
+- **Suite shell** — permission-filtered modules, dashboard "rooms", unified notifications and reports.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technology
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.3 / Laravel 13, Spatie Permission, Sanctum, PHPUnit, Pint
+- React 19 / Inertia 3 / Tailwind 4 / Vite
+- Expo / React Native mobile app in `soldier-app/`
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Quick start
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm run build
+php artisan serve --port=8004
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Set the database and mail values in `.env` before migrating. Local seed data contains demo
+credentials; replace all default passwords before any non-local deployment.
 
-## Contributing
+## Navigation for new users
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Web
 
-## Code of Conduct
+- The left menu is grouped by **suite module** (Ticketing, Care, Care Portal, Maintenance, Supply, Suite Administration).
+- Only one module group is open at a time. Clicking a module header opens it and collapses the others.
+- The group for the current page opens automatically.
+- The dashboard shows **suite rooms** as expandable cards. Opening one room collapses the others.
+- Menu links are filtered by the roles and permissions attached to your account.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Mobile
 
-## Security Vulnerabilities
+- The soldier app reads permission-filtered rooms from `GET /api/suite/rooms`.
+- Dashboard rooms expand one at a time and list the menus you are allowed to use.
+- Ticketing menus open the native Tickets/Create Ticket screens.
+- Other module menus open the web dashboard in the device browser because native Care,
+  Maintenance and Supply screens are not included in this app build yet.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Common workflows
 
-## License
+1. **Create a ticket with no signal** — open the mobile app, use the Ticketing room → New Ticket. The ticket
+   is queued on the device and replays when Sync runs with connectivity.
+2. **Switch modules on the web** — click a module label in the sidebar. Previous module menus collapse.
+3. **Open a module menu on mobile** — expand a room card, then tap a menu. Non-ticketing menus open the web app.
+4. **Change dropdown choices** — SuperAdmin can edit ticket categories, care registration categories,
+   relationships, KB categories, supply units and ranks under Settings → Dropdown Options.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## API endpoints used by the mobile app
+
+All endpoints are under `/api` and use Sanctum Bearer tokens except login/face verification.
+
+- `POST /login`, `POST /face/verify`
+- `GET /user`, `POST /logout`, `POST /logout-all`
+- `GET /suite/modules`, `GET /suite/rooms`, `GET /suite/notifications`
+- `GET /tickets/stats`, `GET /tickets`, `POST /tickets`, `GET /tickets/{ticket}`, `PATCH /tickets/{ticket}`
+- `GET /chat/groups`, `GET /chat/unread`, `GET /chat/groups/{group}/messages`, `POST /chat/groups/{group}/messages`
+- `GET /meta`
+
+## Verification
+
+```bash
+php artisan test --compact
+vendor/bin/pint --dirty --format agent
+npm run build
+```
+
+For the mobile bundle:
+
+```bash
+cd soldier-app
+npx expo export --platform android --output-dir /tmp/soldier-app-export
+```
+
+## Documentation
+
+- [New-user story and workarounds](ONBOARDING_STORY.md)
+- [Suite architecture and migration plan](SUITE_PLAN.md)
+- [Soldier mobile app setup](soldier-app/README.md)
+- In-app `/docs` and `/help` pages
+
+## Known limitations
+
+- Mobile offline capture covers ticket creation; Care, Maintenance and Supply are web-first for now.
+- The web offline ticket form does not yet replay queued tickets.
+- MFA/TOTP and payment-gateway integrations remain configuration/decision items in `SUITE_PLAN.md`.
+- `soldier-app/dist/` is generated build output and should not be committed.

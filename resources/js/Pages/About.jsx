@@ -21,21 +21,20 @@ export default function About() {
             <div className="bg-white p-6 rounded-xl border mt-4">
                 <h3 className="font-bold">Key Features Delivered</h3>
                 <ul className="list-disc ml-5 text-sm text-slate-600 mt-2 space-y-1">
-                    <li>Ticket generation / tracking / reporting + offline PWA queue.</li>
+                    <li>Ticket generation / tracking / reporting + mobile offline queue and web draft.</li>
                     <li>Dual Face Auth: <b>Local</b> (face-api.js on-premise) ↔ <b>Cloud</b> (AWS/Azure) toggleable by SuperAdmin.</li>
                     <li>RBAC: SuperAdmin / Admin / Support / Soldier with Spatie permissions.</li>
                     <li>Bulk user import (CSV) + Roles & Permissions CRUD.</li>
-                    <li>Encrypted embeddings, audit logs, personnel DB sync ready.</li>
+                    <li>Numeric face embeddings, audit logs, suite rooms and permission-filtered menus.</li>
                 </ul>
                 <div className="mt-4 flex gap-3">
                     <Link href="/help" className="bg-[#0b3d0b] text-white px-4 py-2 rounded">How It Works</Link>
                     <Link href="/docs" className="border px-4 py-2 rounded">Documentation</Link>
-                    <a href="/README.md" target="_blank" className="text-sm underline self-center">README.md</a>
                 </div>
             </div>
             <div className="bg-white p-6 rounded-xl border mt-4">
                 <h3 className="font-bold">Tech Stack</h3>
-                <p className="text-sm text-slate-600 mt-2"><code>Laravel 13 + React 19 + Inertia 3 + Tailwind 4 + face-api.js (tfjs) + Spatie Permission + SQLite/MySQL + PWA</code>. Hosted on Army private cloud / intranet. Follows NDPA, AES-256.</p>
+                <p className="text-sm text-slate-600 mt-2"><code>Laravel 13 + React 19 + Inertia 3 + Tailwind 4 + face-api.js (tfjs) + Spatie Permission + SQLite/MySQL + PWA</code>. Built for Army private cloud/intranet. Use HTTPS and environment-specific security controls, including NDPA-aligned retention and access policies.</p>
             </div>
             <div className="text-xs text-slate-500 mt-6">© Nigerian Army • Built for operational effectiveness • Contact: HQ ICT • Version: 1.0.0</div>
         </Layout>

@@ -1,7 +1,8 @@
 # NA Support Services Suite — Architecture & Migration Plan
 
-Status: draft for approval
+Status: living implementation reference
 Date: 19 November 2026
+Updated: 23 November 2026
 Scope: combine NA E-Ticket (existing) with NA Care Network, ArmyFix and SupplyTrack into one Laravel application with four modules.
 
 ## 1. Goal and principles
@@ -97,7 +98,8 @@ Hospital-level authority comes from the pivot + policies, not from roles alone. 
 
 ### 3.3 Navigation and design system
 
-- Replace the hard-coded flat `items` array in `resources/js/Components/SideMenu.jsx:35-57` with a server-provided, permission-filtered menu grouped by module. Keep the existing green header (`#0b3d0b`) and branding props.
+- The side menu in `resources/js/Components/SideMenu.jsx` is grouped by the permission-filtered `suite.modules` prop. Groups are collapsible accordions: only one module is open at a time, and the current route auto-opens its module. Keep the existing green header (`#0b3d0b`) and branding props. Moving the full menu definition to the server remains a future cleanup.
+- The dashboard uses permission-filtered room cards from `SuiteNavigation::roomsFor()`. Opening a room collapses the other rooms; Patient Portal remains inside Care.
 - Extract repeated JSX into `resources/js/Components/ui/`: `PageHeader`, `StatCard`, `DataTable` (search/sort/paginate), `StatusBadge`, `EmptyState`, `Skeleton`, `ConfirmDialog`. Use Tailwind v4 `@theme` tokens in `resources/css/app.css`; do not add `tailwind.config.js`.
 - Two shells sharing the primitives: `SuiteShell` (staff) and `PatientPortalLayout` (patient portal). Patients see only their own requests, appointments, family and invoices.
 - Sidebar badge becomes a suite-wide unread/overdue count from `suite_notifications`, replacing the chat-only 5-second fetch at `SideMenu.jsx:25-33`. Use Inertia `usePoll` on the dashboard and filtered partial reloads.
@@ -180,9 +182,10 @@ Keep integrations explicit and narrow:
 
 ## 7. API and mobile
 
-- Keep `routes/api.php` and `soldier-app/` working unchanged in phase 1. Add `/api/suite/modules` and `/api/suite/notifications` for the soldier app's home screen.
-- Later API additions follow the existing Sanctum Bearer-token convention and `auth:sanctum` middleware group (`routes/api.php:39-69`).
-- Fix `soldier-app/src/api/client.js:7` hard-coded Render URL so app.json `expo.extra.apiUrl` is the single source of truth as part of the mobile phase.
+- `routes/api.php` exposes `/api/suite/modules`, `/api/suite/rooms` and `/api/suite/notifications` for the soldier app's home screen. Rooms are permission-filtered by `SuiteNavigation::roomsFor()`.
+- Later API additions follow the existing Sanctum Bearer-token convention and `auth:sanctum` middleware group (`routes/api.php`).
+- The mobile dashboard renders expandable room cards with the same one-open behavior as the web dashboard. Ticketing menus open native screens; other module menus open the web dashboard in the device browser until native screens are built.
+- `soldier-app/src/api/client.js` reads `expo.extra.apiUrl` from `soldier-app/app.json`, which is the single source of truth. Verify that value for each build environment.
 - Patient portal and staff workspace are Inertia pages; no separate Angular apps are introduced.
 
 ## 8. Delivery phases and acceptance criteria
@@ -205,7 +208,7 @@ Keep integrations explicit and narrow:
 
 **Phase 4 — Unified insights and mobile**
 - Suite reports/workbooks, AI questions, mobile module navigation and API fixes.
-- Acceptance: combined dashboard respects each module's scope; exports are permission-gated.
+- Acceptance: combined dashboard respects each module's scope; exports are permission-gated; mobile room cards show only permitted menus; ticketing menus work natively and other menus fall back to the web dashboard.
 
 Care is the largest module. If it is the delivery priority, swap phases 2 and 3, but keep Phase 0/1 first either way.
 
@@ -215,15 +218,16 @@ Care is the largest module. If it is the delivery priority, swap phases 2 and 3,
 - Run `php artisan test --compact` for affected files after each change, then `vendor/bin/pint --dirty --format agent`.
 - `composer audit` before release; current install reports advisories in existing packages.
 - Frontend changes require `npm run build` (or a dev server) to confirm the Vite manifest.
+- Mobile changes require an Expo bundle export, for example `npx expo export --platform android --output-dir /tmp/soldier-app-export`.
 
 ## 10. Open decisions and risks
 
 1. **MFA package** — Laravel 13 core has no TOTP; approve a package (e.g. Fortify or a TOTP/QR library) before phase 0/3.
-2. **Module folder approval** — `app/Modules` and `app/Shared` are new base folders; confirm before writing code.
+2. **Module folder approval** — `app/Modules` and `app/Shared` are now in use; ask before adding another new base folder.
 3. **Care funding/payment** — OPay temporary accounts need credentials, a provider contract and approval; manual transfers can be receipt-based with Accounts verification first.
-4. **Clinical data sensitivity** — encryption at rest, audit retention, upload scanning and access reviews need explicit sign-off; do not claim AES-256 embeddings or blink liveness until implemented (the current help/docs pages already overstate both).
+4. **Clinical data sensitivity** — encryption at rest, audit retention, upload scanning and access reviews need explicit sign-off; do not claim AES-256 embeddings or blink liveness until implemented. Help, Docs and FaceAuth text now avoid those claims.
 5. **One database** — simplest for this team, but a medical module raises backup/retention questions. Confirm this is acceptable.
 6. **Seeded credentials and static default passwords** (`Password@123`, `Admin@123`, `Soldier@123`) must be replaced before any non-local deployment.
 7. **Deployment** — single Docker/Render service fits the module plan; the Vercel `api/index.php` path needs review if that target is still used.
-8. **Existing uncommitted work** — several controllers, pages and a migration are already modified in the working tree. This plan assumes they are preserved; no module work should overwrite them.
-9. **Documentation** — this file is the only new doc requested; in-app Help/Docs/ProposalCoverage pages contain stale claims that should be corrected when those modules ship.
+8. **Working tree** — implementation work is committed through `ed5ccbe`; only generated `soldier-app/dist/` build output remains untracked and should stay out of commits.
+9. **Documentation** — root `README.md`, `SUITE_PLAN.md`, `soldier-app/README.md`, in-app Docs/Help/About/ProposalCoverage pages and `ONBOARDING_STORY.md` are the current documentation set. Keep them in sync as modules ship.

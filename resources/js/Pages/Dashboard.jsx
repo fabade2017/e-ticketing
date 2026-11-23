@@ -54,7 +54,7 @@ export default function Dashboard({ stats, ai, recent, scope, canSeeAll, isAll, 
                 </div>
                 <SuiteRooms rooms={suite?.rooms} insights={suiteInsights} />
                 <div className="mt-6 grid md:grid-cols-2 gap-4">
-                    <Link href="/tickets/create" className="bg-[#0b3d0b] text-white p-8 rounded-xl font-semibold block text-center text-lg">+ Create New Ticket<br/><span className="text-xs font-normal opacity-80">Works offline — queues when no signal</span></Link>
+                    <Link href="/tickets/create" className="bg-[#0b3d0b] text-white p-8 rounded-xl font-semibold block text-center text-lg">+ Create New Ticket<br/><span className="text-xs font-normal opacity-80">Mobile app queues when no signal</span></Link>
                     <Link href="/tickets" className="bg-white border p-8 rounded-xl font-semibold block text-center">My Tickets →<br/><span className="text-xs font-normal text-slate-500">Track your requests</span></Link>
                 </div>
                 <div className="bg-white border rounded-xl p-5 mt-6">

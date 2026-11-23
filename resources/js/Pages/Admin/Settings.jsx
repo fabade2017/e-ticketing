@@ -59,7 +59,7 @@ export default function Settings({ settings }) {
                 {data.face_auth_mode==='cloud' && (
                     <div><label className="text-sm font-medium">Cloud Provider</label><select value={data.cloud_provider} onChange={e=>setData('cloud_provider', e.target.value)} className="w-full border rounded px-3 py-2 mt-1"><option value="aws">AWS Rekognition</option><option value="azure">Azure Face API</option></select></div>
                 )}
-                <div className="text-xs text-slate-500">Threshold: {settings.threshold} • Liveness required • Embeddings stored encrypted</div>
+                <div className="text-xs text-slate-500">Threshold: {settings.threshold} • Vectors stored as numeric embeddings • Liveness checks not enabled in this build • Use HTTPS</div>
                 <button disabled={processing} className="w-full bg-[#0b3d0b] text-white py-3 rounded font-semibold">Save Settings (SuperAdmin)</button>
             </form>
 

@@ -86,7 +86,7 @@ export default function FaceAuth({ mode = 'local', onEmbedding, onVerifyResult }
                 <button onClick={() => capture('verify')} disabled={loading || !faceapi} className="flex-1 bg-[#0b3d0b] text-white py-2 rounded disabled:opacity-50">Verify Face (Login)</button>
                 <button onClick={() => capture('enroll')} disabled={loading || !faceapi} className="flex-1 bg-slate-800 text-white py-2 rounded disabled:opacity-50">Capture for Enrollment</button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">Liveness: blink detection. Vectors are 128-float embeddings, not photos.</p>
+            <p className="text-[11px] text-slate-400 mt-2">Vectors are 128-float embeddings, not photos. Liveness checks are not enabled in this build.</p>
         </div>
     );
 }
