@@ -15,6 +15,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UserCrudController;
+use App\Modules\Supply\Http\Controllers\SupplyItemCategoryController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -70,6 +71,13 @@ Route::middleware('auth')->group(function () {
 
     // Face enrollment (SuperAdmin/Admin)
     Route::post('/face/enroll', [FaceAuthController::class, 'enroll'])->name('face.enroll')->middleware('role:SuperAdmin|Admin');
+
+    Route::middleware('role:SuperAdmin|Admin')->group(function () {
+        Route::get('/admin/supply-categories', [SupplyItemCategoryController::class, 'index'])->name('admin.supply-categories.index');
+        Route::post('/admin/supply-categories', [SupplyItemCategoryController::class, 'store'])->name('admin.supply-categories.store');
+        Route::put('/admin/supply-categories/{supplyItemCategory}', [SupplyItemCategoryController::class, 'update'])->name('admin.supply-categories.update');
+        Route::delete('/admin/supply-categories/{supplyItemCategory}', [SupplyItemCategoryController::class, 'destroy'])->name('admin.supply-categories.destroy');
+    });
 
     // SuperAdmin-only
     Route::middleware('role:SuperAdmin')->group(function () {

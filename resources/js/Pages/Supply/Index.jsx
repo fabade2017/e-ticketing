@@ -1,15 +1,17 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import Layout from '../../Components/Layout';
 import PageHeader from '../../Components/ui/PageHeader';
 import StatCard from '../../Components/ui/StatCard';
 import StatusBadge from '../../Components/ui/StatusBadge';
 import EmptyState from '../../Components/ui/EmptyState';
 
-export default function Index({ balances, items, approvals, insights, filters, canSeeAll, isAll, currentHospital }) {
+export default function Index({ balances, items, categories, approvals, insights, filters, canSeeAll, isAll, currentHospital }) {
+    const { auth } = usePage().props;
+    const canManageCategories = auth?.user?.roles?.some((role) => role === 'Admin' || role === 'SuperAdmin');
     const receive = useForm({ item_id: '', quantity: '', supplier: '', document_no: '', batch_code: '', expires_on: '', idempotency_key: '' });
     const issue = useForm({ item_id: '', quantity: '', recipient_type: 'unit', recipient_id: '', purpose: '', idempotency_key: '' });
     const reconcile = useForm({ item_id: '', expected_quantity: '', counted_quantity: '', notes: '', idempotency_key: '' });
-    const newItem = useForm({ name: '', sku: '', category: '', unit: 'pcs', description: '' });
+    const newItem = useForm({ name: '', sku: '', supply_item_category_id: '', unit: 'pcs', description: '' });
 
     return (
         <Layout>
@@ -19,6 +21,7 @@ export default function Index({ balances, items, approvals, insights, filters, c
                 actions={
                     <>
                         {canSeeAll && <Link href={isAll ? '/supply?scope=scoped' : '/supply?scope=all'} className="border rounded px-3 py-2 text-sm">{isAll ? 'My Hospital' : 'All Hospitals'}</Link>}
+                        {canManageCategories && <Link href="/admin/supply-categories" className="border rounded px-3 py-2 text-sm">Manage Categories</Link>}
                         <Link href="/supply/approvals" className="border rounded px-3 py-2 text-sm">Approvals</Link>
                     </>
                 }
@@ -76,7 +79,10 @@ export default function Index({ balances, items, approvals, insights, filters, c
                         <div className="mt-3 space-y-2">
                             <input className="w-full border rounded px-2 py-2 text-sm" placeholder="Name" value={newItem.data.name} onChange={(e) => newItem.setData('name', e.target.value)} />
                             <input className="w-full border rounded px-2 py-2 text-sm" placeholder="SKU" value={newItem.data.sku} onChange={(e) => newItem.setData('sku', e.target.value)} />
-                            <input className="w-full border rounded px-2 py-2 text-sm" placeholder="Category" value={newItem.data.category} onChange={(e) => newItem.setData('category', e.target.value)} />
+                            <select className="w-full border rounded px-2 py-2 text-sm" value={newItem.data.supply_item_category_id} onChange={(e) => newItem.setData('supply_item_category_id', e.target.value)}>
+                                <option value="">Select category</option>
+                                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                            </select>
                             <input className="w-full border rounded px-2 py-2 text-sm" placeholder="Unit" value={newItem.data.unit} onChange={(e) => newItem.setData('unit', e.target.value)} />
                             {Object.values(newItem.errors).map((error, index) => <p key={index} className="text-red-600 text-xs">{error}</p>)}
                             <button disabled={newItem.processing} className="w-full border rounded py-2 text-sm">Add item</button>

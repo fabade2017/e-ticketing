@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Once;
 
 class BrandingLogo extends Model
 {
@@ -12,11 +13,13 @@ class BrandingLogo extends Model
 
     public static function current(): ?self
     {
-        try {
-            return static::query()->latest('id')->first();
-        } catch (\Throwable $e) {
-            return null;
-        }
+        return once(function (): ?self {
+            try {
+                return static::query()->latest('id')->first();
+            } catch (\Throwable $e) {
+                return null;
+            }
+        });
     }
 
     /**
@@ -60,11 +63,14 @@ class BrandingLogo extends Model
     {
         static::query()->delete();
 
-        return static::create([
+        $logo = static::create([
             'filename' => $file->getClientOriginalName(),
             'mime' => $file->getMimeType() ?: 'image/png',
             'data' => base64_encode((string) file_get_contents($file->getRealPath())),
         ]);
+        Once::flush();
+
+        return $logo;
     }
 
     public static function forget(): void
@@ -74,6 +80,8 @@ class BrandingLogo extends Model
         } catch (\Throwable $e) {
             // ignore
         }
+
+        Once::flush();
     }
 
     public function contents(): string

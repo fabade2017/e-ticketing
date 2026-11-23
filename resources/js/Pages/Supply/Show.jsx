@@ -6,7 +6,7 @@ import EmptyState from '../../Components/ui/EmptyState';
 export default function Show({ item, balances, batches }) {
     return (
         <Layout>
-            <PageHeader title={item.name} subtitle={`${item.sku} · ${item.unit}`} actions={<Link href="/supply" className="border rounded px-3 py-2 text-sm">Back to supply</Link>} />
+            <PageHeader title={item.name} subtitle={`${item.sku} · ${item.unit}${item.category ? ` · ${item.category}` : ''}`} actions={<Link href="/supply" className="border rounded px-3 py-2 text-sm">Back to supply</Link>} />
             <div className="grid md:grid-cols-2 gap-4 mt-5">
                 <div className="bg-white border rounded-xl p-4">
                     <h2 className="font-semibold">Stock by hospital</h2>

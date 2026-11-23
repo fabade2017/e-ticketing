@@ -38,6 +38,19 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $settings = SystemSetting::values([
+            'face_auth_mode',
+            'face_auth_enabled',
+            'app_name',
+            'app_motto',
+            'app_download_url',
+        ], [
+            'face_auth_mode' => 'local',
+            'face_auth_enabled' => '1',
+            'app_name' => config('branding.app_name', 'NA E-Ticket'),
+            'app_motto' => config('branding.app_motto', 'Secure • Offline-Capable • Nigerian Army'),
+        ]);
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -56,15 +69,15 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'systemSettings' => [
-                'face_auth_mode' => SystemSetting::getValue('face_auth_mode', 'local'),
-                'face_auth_enabled' => SystemSetting::getValue('face_auth_enabled', '1') === '1',
+                'face_auth_mode' => $settings['face_auth_mode'],
+                'face_auth_enabled' => $settings['face_auth_enabled'] === '1',
             ],
             'branding' => [
-                'app_name' => SystemSetting::getValue('app_name', config('branding.app_name', 'NA E-Ticket')),
-                'app_motto' => SystemSetting::getValue('app_motto', config('branding.app_motto', 'Secure • Offline-Capable • Nigerian Army')),
+                'app_name' => $settings['app_name'],
+                'app_motto' => $settings['app_motto'],
                 'app_logo' => BrandingLogo::displayName(),
                 'logo_url' => BrandingLogo::url(), // full URL for <img> and favicon; null if none
-                'app_download_url' => SystemSetting::getValue('app_download_url', config('branding.download_url')),
+                'app_download_url' => $settings['app_download_url'] ?? config('branding.download_url'),
             ],
             'suite' => [
                 'modules' => fn () => (new SuiteNavigation)->modulesFor($request->user()),

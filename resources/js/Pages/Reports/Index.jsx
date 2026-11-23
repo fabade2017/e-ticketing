@@ -1,5 +1,5 @@
 import Layout from '../../Components/Layout';
-import { Link, router } from '@inertiajs/react';
+import { Link, WhenVisible, router } from '@inertiajs/react';
 
 export default function ReportsIndex({ report, narrative, canGenerate, scope, isAll, canSeeAll, suiteSections = [], availableModules = [], selectedModule = 'all', filters = {}, canSeeNetworkReports = false }) {
     const workbookQuery = new URLSearchParams();
@@ -89,7 +89,16 @@ export default function ReportsIndex({ report, narrative, canGenerate, scope, is
 
             <div className="bg-gradient-to-br from-[#0b3d0b] to-slate-900 text-white rounded-xl p-6 mt-6">
                 <h3 className="font-bold">🤖 AI SITREP Narrative {canGenerate ? '(Groq)' : '(Local — add GROQ_API_KEY for Groq)'}</h3>
-                {narrative ? <pre className="bg-white text-slate-800 rounded p-4 mt-3 text-sm whitespace-pre-wrap break-words">{narrative}</pre> : <p className="text-sm opacity-80 mt-3">No LLM narrative — rule-based insights above. Add Groq key to generate world-class SITREP.</p>}
+                {canGenerate ? (
+                    <WhenVisible
+                        data="narrative"
+                        fallback={<div className="animate-pulse bg-white/10 rounded p-4 mt-3 h-24" />}
+                    >
+                        {narrative ? <pre className="bg-white text-slate-800 rounded p-4 mt-3 text-sm whitespace-pre-wrap break-words">{narrative}</pre> : <p className="text-sm opacity-80 mt-3">No LLM narrative — rule-based insights above.</p>}
+                    </WhenVisible>
+                ) : (
+                    <p className="text-sm opacity-80 mt-3">No LLM narrative — rule-based insights above. Add Groq key to generate world-class SITREP.</p>
+                )}
                 <div className="mt-4 flex gap-3">
                     <a href={workbookUrl} className="bg-yellow-500 text-black px-4 py-2 rounded text-sm font-semibold">Download Suite Workbook .xlsx</a>
                     <Link href="/dashboard" className="border border-white/30 px-4 py-2 rounded text-sm">Back to Dashboard</Link>

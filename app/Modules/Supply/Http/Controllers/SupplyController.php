@@ -8,12 +8,14 @@ use App\Models\User;
 use App\Modules\Supply\Models\SupplyApprovalRequest;
 use App\Modules\Supply\Models\SupplyBatch;
 use App\Modules\Supply\Models\SupplyItem;
+use App\Modules\Supply\Models\SupplyItemCategory;
 use App\Modules\Supply\Models\SupplyStockBalance;
 use App\Modules\Supply\Services\StockLedgerService;
 use App\Modules\Supply\Services\SupplyAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SupplyController extends Controller
@@ -45,6 +47,7 @@ class SupplyController extends Controller
         return Inertia::render('Supply/Index', [
             'balances' => $query->latest()->paginate(20)->withQueryString(),
             'items' => SupplyItem::active()->orderBy('name')->get(['id', 'name', 'sku', 'unit']),
+            'categories' => SupplyItemCategory::active()->orderBy('name')->get(['id', 'name']),
             'approvals' => SupplyApprovalRequest::pending()
                 ->whereIn('hospital_id', $hospitalIds->all())
                 ->with('subject')
@@ -86,10 +89,13 @@ class SupplyController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:100|unique:supply_items,sku',
-            'category' => 'nullable|string|max:100',
+            'supply_item_category_id' => ['required', 'integer', Rule::exists('supply_item_categories', 'id')->where('is_active', true)],
             'unit' => 'required|string|max:50',
             'description' => 'nullable|string',
         ]);
+
+        $category = SupplyItemCategory::findOrFail($validated['supply_item_category_id']);
+        $validated['category'] = $category->name;
 
         SupplyItem::create($validated);
 

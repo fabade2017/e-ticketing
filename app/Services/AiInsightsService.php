@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Shared\Reporting\SuiteInsights;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AiInsightsService
@@ -24,7 +25,7 @@ class AiInsightsService
 
     public static function suiteSummary(User $user, bool $includeAll): array
     {
-        return app(SuiteInsights::class)->for($user, $includeAll);
+        return SuiteInsights::build($user, $includeAll);
     }
 
     public static function worldClassReport(string $type = 'SITREP', $from = null, $to = null, ?User $user = null): array
@@ -39,60 +40,126 @@ class AiInsightsService
             $base->visibleTo($user);
         }
         if ($from) {
-            $base->whereDate('created_at', '>=', $from);
+            $base->where('created_at', '>=', Carbon::parse($from)->startOfDay());
         }
         if ($to) {
-            $base->whereDate('created_at', '<=', $to);
+            $base->where('created_at', '<=', Carbon::parse($to)->endOfDay());
         }
-
-        $total = (clone $base)->count();
-        $byStatus = (clone $base)->select('status', DB::raw('count(*) as c'))->groupBy('status')->pluck('c', 'status')->toArray();
-        $byCategory = (clone $base)->select('category', DB::raw('count(*) as c'))->groupBy('category')->pluck('c', 'category')->toArray();
-        $byPriority = (clone $base)->select('priority', DB::raw('count(*) as c'))->groupBy('priority')->pluck('c', 'priority')->toArray();
-        $byDept = (clone $base)->select('department_id', DB::raw('count(*) as c'))->groupBy('department_id')->with('department')->get()->map(fn ($r) => ['dept' => $r->department?->name ?? 'Unassigned', 'count' => $r->c])->toArray();
-        $byUnit = (clone $base)->select('unit', DB::raw('count(*) as c'))->whereNotNull('unit')->groupBy('unit')->orderByDesc('c')->limit(5)->get()->map(fn ($r) => ['unit' => $r->unit, 'count' => $r->c])->toArray();
 
         $driver = DB::connection()->getDriverName();
-        $dateExpr = $driver === 'pgsql' ? "to_char(created_at, 'YYYY-MM-DD')" : ($driver === 'mysql' ? "DATE_FORMAT(created_at, '%Y-%m-%d')" : "strftime('%Y-%m-%d', created_at)");
-        $trendQ = clone $base;
-        $trend = $trendQ->select(DB::raw("$dateExpr as d"), DB::raw('count(*) as c'))->groupBy('d')->orderBy('d')->limit(14)->get()->map(fn ($r) => ['date' => $r->d, 'count' => $r->c])->toArray();
+        $avgCloseExpression = match ($driver) {
+            'pgsql' => 'EXTRACT(EPOCH FROM (closed_at - created_at))/3600',
+            'mysql' => 'TIMESTAMPDIFF(SECOND, created_at, closed_at)/3600',
+            default => '(julianday(closed_at)-julianday(created_at))*24',
+        };
+        $dateExpression = match ($driver) {
+            'pgsql' => "to_char(created_at, 'YYYY-MM-DD')",
+            'mysql' => "DATE_FORMAT(created_at, '%Y-%m-%d')",
+            default => "strftime('%Y-%m-%d', created_at)",
+        };
+        $now = now()->toDateTimeString();
 
-        $urgentOpen = (clone $base)->where('priority', 'urgent')->whereIn('status', ['open', 'in_progress'])->count();
-        $overdue = (clone $base)->where('sla_due_at', '<', now())->whereNotIn('status', ['resolved', 'closed'])->count();
-        $escalated = (clone $base)->whereNotNull('escalated_at')->count();
-        if ($driver === 'pgsql') {
-            $avgCloseHours = (clone $base)->whereNotNull('closed_at')->selectRaw('avg(EXTRACT(EPOCH FROM (closed_at - created_at))/3600) as avg')->value('avg');
-        } elseif ($driver === 'mysql') {
-            $avgCloseHours = (clone $base)->whereNotNull('closed_at')->selectRaw('avg(TIMESTAMPDIFF(SECOND, created_at, closed_at)/3600) as avg')->value('avg');
-        } else {
-            $avgCloseHours = (clone $base)->whereNotNull('closed_at')->selectRaw('avg((julianday(closed_at)-julianday(created_at))*24) as avg')->value('avg');
-        }
-        // Face/officer stats scoped to user's department/unit when user present and not SuperAdmin
-        if ($user && ! $user->hasRole('SuperAdmin')) {
-            $userQ = User::query();
-            if ($user->department_id) {
-                $userQ->where('department_id', $user->department_id);
-            } elseif ($user->unit) {
-                $userQ->where('unit', $user->unit);
-            } else {
-                $userQ->where('id', $user->id);
+        $summary = (clone $base)->toBase()
+            ->selectRaw(
+                "count(*) as total,
+                count(case when priority = 'urgent' and status in ('open', 'in_progress') then 1 end) as urgent_open,
+                count(case when sla_due_at < ? and status not in ('resolved', 'closed') then 1 end) as overdue,
+                count(case when escalated_at is not null then 1 end) as escalated,
+                avg(case when closed_at is not null then {$avgCloseExpression} end) as avg_close_hours",
+                [$now]
+            )
+            ->first();
+
+        $total = (int) $summary->total;
+        $urgentOpen = (int) $summary->urgent_open;
+        $overdue = (int) $summary->overdue;
+        $escalated = (int) $summary->escalated;
+        $avgCloseHours = $summary->avg_close_hours === null ? null : (float) $summary->avg_close_hours;
+
+        $grouped = (clone $base)->toBase()
+            ->selectRaw('status, category, priority, department_id, unit, count(*) as c')
+            ->groupBy('status', 'category', 'priority', 'department_id', 'unit')
+            ->get();
+
+        $byStatus = [];
+        $byCategory = [];
+        $byPriority = [];
+        $departmentCounts = [];
+        $unitCounts = [];
+
+        foreach ($grouped as $row) {
+            $count = (int) $row->c;
+            $status = (string) $row->status;
+            $category = (string) $row->category;
+            $priority = (string) $row->priority;
+            $byStatus[$status] = ($byStatus[$status] ?? 0) + $count;
+            $byCategory[$category] = ($byCategory[$category] ?? 0) + $count;
+            $byPriority[$priority] = ($byPriority[$priority] ?? 0) + $count;
+
+            if ($row->department_id !== null) {
+                $departmentId = (int) $row->department_id;
+                $departmentCounts[$departmentId] = ($departmentCounts[$departmentId] ?? 0) + $count;
             }
-            $scopeUserTotal = (clone $userQ)->count();
-            $scopeFace = (clone $userQ)->whereNotNull('face_embedding')->count();
-            $faceCoverage = $scopeUserTotal ? round($scopeFace / $scopeUserTotal * 100) : 0;
-            $deptCount = $user->department_id ? 1 : Department::whereIn('id', User::whereNotNull('department_id')->pluck('department_id'))->distinct()->count();
-            $officerCount = $scopeUserTotal;
+            if ($row->unit !== null && $row->unit !== '') {
+                $unit = (string) $row->unit;
+                $unitCounts[$unit] = ($unitCounts[$unit] ?? 0) + $count;
+            }
+        }
+
+        $departmentNames = Department::whereIn('id', array_keys($departmentCounts))->pluck('name', 'id');
+        $byDept = collect($departmentCounts)
+            ->map(fn (int $count, int $id): array => ['dept' => $departmentNames[$id] ?? 'Unassigned', 'count' => $count])
+            ->sortByDesc('count')
+            ->values()
+            ->all();
+        arsort($unitCounts);
+        $byUnit = collect($unitCounts)
+            ->take(5)
+            ->map(fn (int $count, string $unit): array => ['unit' => $unit, 'count' => $count])
+            ->values()
+            ->all();
+
+        $trend = (clone $base)->toBase()
+            ->selectRaw("{$dateExpression} as d, count(*) as c")
+            ->groupBy('d')
+            ->orderBy('d')
+            ->limit(14)
+            ->get()
+            ->map(fn ($row): array => ['date' => $row->d, 'count' => (int) $row->c])
+            ->all();
+
+        $userQuery = User::query();
+        $scopedToRequester = $user && ! $user->hasRole('SuperAdmin');
+        if ($scopedToRequester) {
+            if ($user->department_id) {
+                $userQuery->where('department_id', $user->department_id);
+            } elseif ($user->unit) {
+                $userQuery->where('unit', $user->unit);
+            } else {
+                $userQuery->where('id', $user->id);
+            }
+        }
+
+        $userSummary = (clone $userQuery)->toBase()
+            ->selectRaw('count(*) as total, count(case when face_embedding is not null then 1 end) as face')
+            ->first();
+        $officerCount = (int) $userSummary->total;
+        $faceCoverage = $officerCount ? round(((int) $userSummary->face / $officerCount) * 100) : 0;
+
+        if ($scopedToRequester && $user->department_id) {
+            $deptCount = 1;
+        } elseif ($scopedToRequester) {
+            $deptCount = Department::whereIn('id', User::whereNotNull('department_id')->select('department_id'))->distinct()->count();
         } else {
-            $faceCoverage = User::count() ? round(User::whereNotNull('face_embedding')->count() / User::count() * 100) : 0;
             $deptCount = Department::count();
-            $officerCount = User::count();
         }
 
         $insights = [];
         $readiness = $overdue > 0 ? 'AMBER' : ($urgentOpen > 0 ? 'AMBER' : 'GREEN');
         $insights[] = "🛡️ Readiness: {$readiness} — ".($readiness === 'GREEN' ? 'Ops nominal' : "{$overdue} overdue, {$urgentOpen} urgent open");
-        if (($byStatus['open'] ?? 0) > $total * 0.5) {
-            $insights[] = '⚠️ Backlog: '.($byStatus['open'] ?? 0)."/{$total} open (".round(($byStatus['open'] ?? 0) / $total * 100).'%) — assign Support per border sector.';
+        $openCount = $byStatus['open'] ?? 0;
+        if ($total > 0 && $openCount > $total * 0.5) {
+            $insights[] = '⚠️ Backlog: '.$openCount."/{$total} open (".round(($openCount / $total) * 100).'%) — assign Support per border sector.';
         }
         if (($byCategory['medical'] ?? 0) > 0) {
             $insights[] = '🏥 Medical: '.($byCategory['medical']).' — NATO triage: SLA 4h, MEDEVAC priority.';

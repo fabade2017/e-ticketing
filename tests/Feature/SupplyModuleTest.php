@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Supply\Models\SupplyApprovalRequest;
 use App\Modules\Supply\Models\SupplyGoodsReceived;
 use App\Modules\Supply\Models\SupplyItem;
+use App\Modules\Supply\Models\SupplyItemCategory;
 use App\Modules\Supply\Models\SupplyReorderRule;
 use App\Modules\Supply\Models\SupplyStockBalance;
 use App\Modules\Supply\Services\StockLedgerService;
@@ -134,7 +135,46 @@ class SupplyModuleTest extends TestCase
 
         $this->actingAs($user)->get('/supply')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('Supply/Index'));
+            ->assertInertia(fn ($page) => $page
+                ->component('Supply/Index')
+                ->where('categories', fn ($categories) => collect($categories)->pluck('name')->contains('medical'))
+            );
+    }
+
+    public function test_new_item_uses_selected_active_category(): void
+    {
+        $hospital = $this->hospital();
+        $user = $this->moduleUser('WarehouseManager', $hospital);
+        $category = SupplyItemCategory::factory()->create(['name' => 'Surgical Consumables']);
+
+        $this->actingAs($user)->post('/supply/items', [
+            'name' => 'Sterile gloves',
+            'sku' => 'SKU-CATEGORY-1',
+            'supply_item_category_id' => $category->id,
+            'unit' => 'box',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('supply_items', [
+            'sku' => 'SKU-CATEGORY-1',
+            'category' => 'Surgical Consumables',
+            'supply_item_category_id' => $category->id,
+        ]);
+    }
+
+    public function test_new_item_rejects_inactive_category(): void
+    {
+        $hospital = $this->hospital();
+        $user = $this->moduleUser('WarehouseManager', $hospital);
+        $category = SupplyItemCategory::factory()->inactive()->create();
+
+        $this->actingAs($user)->post('/supply/items', [
+            'name' => 'Obsolete item',
+            'sku' => 'SKU-CATEGORY-2',
+            'supply_item_category_id' => $category->id,
+            'unit' => 'each',
+        ])->assertSessionHasErrors('supply_item_category_id');
+
+        $this->assertDatabaseMissing('supply_items', ['sku' => 'SKU-CATEGORY-2']);
     }
 
     private function hospital(): Hospital

@@ -25,12 +25,25 @@ export default function SideMenu() {
 
     useEffect(()=>{
         if (!user || !hasPerm('use chat')) return;
+        let timer = null;
         const fetchUnread = async ()=>{
+            if (document.hidden) return;
             try { const r = await fetch('/chat/unread', { headers:{'Accept':'application/json'}}); if (r.ok) { const j = await r.json(); setUnread(j.total || 0); } } catch(e){}
         };
-        fetchUnread();
-        const id = setInterval(fetchUnread, 5000);
-        return ()=> clearInterval(id);
+        const start = ()=>{
+            if (timer) return;
+            fetchUnread();
+            timer = setInterval(fetchUnread, 15000);
+        };
+        const stop = ()=>{
+            if (!timer) return;
+            clearInterval(timer);
+            timer = null;
+        };
+        const onVisibility = ()=> document.hidden ? stop() : start();
+        start();
+        document.addEventListener('visibilitychange', onVisibility);
+        return ()=> { stop(); document.removeEventListener('visibilitychange', onVisibility); };
     }, [user?.id, perms.join(',')]);
 
     const items = [
@@ -52,6 +65,7 @@ export default function SideMenu() {
         { label: 'Roles & Permissions', href: '/admin/roles', icon: '⚙', show: isSuperAdmin, module: 'system' },
         { label: 'Face Settings', href: '/admin/settings', icon: '◉', show: isSuperAdmin, module: 'system' },
         { label: 'Departments', href: '/admin/departments', icon: '🏢', show: isSuperAdmin, module: 'system' },
+        { label: 'Supply Categories', href: '/admin/supply-categories', icon: '▤', show: isAdmin, module: 'system' },
         { label: 'Branding', href: '/admin/branding', icon: '🎨', show: isSuperAdmin, module: 'system' },
         { label: 'Download App', href: '/download', icon: '⬇', show: true, module: 'system' },
         { label: 'Proposal Coverage', href: '/proposal', icon: '✓', show: hasPerm('view proposal coverage'), module: 'system' },

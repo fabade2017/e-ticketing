@@ -11,6 +11,9 @@ use Illuminate\Support\Collection;
 
 class MaintenanceAlertService
 {
+    /** @var array<int, Collection<int, User>> */
+    private array $recipients = [];
+
     public function refresh(): int
     {
         $overdue = MaintWorkOrder::overdue()
@@ -73,7 +76,9 @@ class MaintenanceAlertService
 
     private function recipientsFor(int $hospitalId): Collection
     {
-        return User::all()->filter(fn (User $user): bool => $user->can('use maintenance') && $user->canAccessHospital($hospitalId));
+        return $this->recipients[$hospitalId] ??= User::all()
+            ->filter(fn (User $user): bool => $user->can('use maintenance') && $user->canAccessHospital($hospitalId))
+            ->values();
     }
 
     private function hospitalIdsFor(User $user, bool $includeAll): Collection

@@ -13,26 +13,31 @@ use Spatie\Permission\Models\Role;
 
 class AdminController extends Controller
 {
-    public function dashboard(Request $request, SuiteInsights $suiteInsights)
+    public function dashboard(Request $request)
     {
         $user = auth()->user();
         $isSoldier = $user->hasRole('Soldier') && ! $user->hasAnyRole(['SuperAdmin', 'Admin', 'Support']);
         if ($isSoldier) {
-            $my = Ticket::where('user_id', $user->id);
+            $counts = Ticket::where('user_id', $user->id)->toBase()
+                ->selectRaw("count(*) as my_total,
+                    count(case when status = 'open' then 1 end) as my_open,
+                    count(case when status = 'in_progress' then 1 end) as my_progress,
+                    count(case when status = 'resolved' then 1 end) as my_resolved")
+                ->first();
 
             return Inertia::render('Dashboard', [
                 'stats' => [
-                    'my_total' => (clone $my)->count(),
-                    'my_open' => (clone $my)->where('status', 'open')->count(),
-                    'my_progress' => (clone $my)->where('status', 'in_progress')->count(),
-                    'my_resolved' => (clone $my)->where('status', 'resolved')->count(),
+                    'my_total' => (int) $counts->my_total,
+                    'my_open' => (int) $counts->my_open,
+                    'my_progress' => (int) $counts->my_progress,
+                    'my_resolved' => (int) $counts->my_resolved,
                     'isSoldier' => true,
                 ],
                 'ai' => null,
                 'recent' => Ticket::where('user_id', $user->id)->latest()->limit(5)->get(),
                 'scope' => 'personal',
                 'canSeeAll' => false,
-                'suiteInsights' => $suiteInsights->for($user, false),
+                'suiteInsights' => SuiteInsights::build($user, false),
             ]);
         }
 
@@ -66,28 +71,29 @@ class AdminController extends Controller
         $ai = AiInsightsService::generate(['user' => $user, 'report_user' => $isAll ? null : $user, 'include_all' => $isAll, 'from' => $request->input('from'), 'to' => $request->input('to')]);
 
         // Stats limited to visible scope
-        $scopedOpen = (clone $base)->where('status', 'open')->count();
-        $scopedProgress = (clone $base)->where('status', 'in_progress')->count();
-        $scopedResolved = (clone $base)->where('status', 'resolved')->count();
-        $scopedClosed = (clone $base)->where('status', 'closed')->count();
-        $scopedTotal = (clone $base)->count();
+        $statusCounts = $ai['stats']['byStatus'];
+        $scopedOpen = $statusCounts['open'] ?? 0;
+        $scopedProgress = $statusCounts['in_progress'] ?? 0;
+        $scopedResolved = $statusCounts['resolved'] ?? 0;
+        $scopedClosed = $statusCounts['closed'] ?? 0;
+        $scopedTotal = $ai['stats']['total'];
 
         // Users/face stats: scoped for Admin/Support to department/unit, global for SuperAdmin/all-view
-        if ($isAll || $user->hasRole('SuperAdmin')) {
-            $usersCount = User::count();
-            $faceEnrolled = User::whereNotNull('face_embedding')->count();
-        } else {
-            $uQ = User::query();
+        $userQuery = User::query();
+        if (! $isAll && ! $user->hasRole('SuperAdmin')) {
             if ($user->department_id) {
-                $uQ->where('department_id', $user->department_id);
+                $userQuery->where('department_id', $user->department_id);
             } elseif ($user->unit) {
-                $uQ->where('unit', $user->unit);
+                $userQuery->where('unit', $user->unit);
             } else {
-                $uQ->where('id', $user->id);
+                $userQuery->where('id', $user->id);
             }
-            $usersCount = (clone $uQ)->count();
-            $faceEnrolled = (clone $uQ)->whereNotNull('face_embedding')->count();
         }
+        $userCounts = $userQuery->toBase()
+            ->selectRaw('count(*) as total, count(case when face_embedding is not null then 1 end) as face')
+            ->first();
+        $usersCount = (int) $userCounts->total;
+        $faceEnrolled = (int) $userCounts->face;
 
         $recent = (clone $base)->with('user')->latest()->limit(5)->get();
 
@@ -121,7 +127,7 @@ class AdminController extends Controller
             'scope' => $scopeLabel,
             'canSeeAll' => $canSeeAll,
             'isAll' => $isAll,
-            'suiteInsights' => $suiteInsights->for($user, $isAll),
+            'suiteInsights' => $ai['suite'],
         ]);
     }
 

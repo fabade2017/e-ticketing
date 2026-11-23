@@ -7,10 +7,14 @@ use App\Models\SuiteNotification;
 use App\Models\User;
 use App\Modules\Supply\Models\SupplyBatch;
 use App\Modules\Supply\Models\SupplyStockBalance;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class SupplyAlertService
 {
+    /** @var array<int, Collection<int, User>> */
+    private array $recipients = [];
+
     /**
      * @return array{low_stock: int, damaged: int, expiring: int}
      */
@@ -58,7 +62,7 @@ class SupplyAlertService
             ];
         }
 
-        $lowStock = $this->lowStockForHospitals($hospitalIds)->count();
+        $lowStock = $this->lowStockQuery($hospitalIds)->count();
         $batchIssues = SupplyBatch::whereIn('hospital_id', $hospitalIds)
             ->where(function ($query): void {
                 $query->where('is_damaged', true)
@@ -78,10 +82,13 @@ class SupplyAlertService
 
     private function lowStockRows(int $hospitalId): Collection
     {
-        return $this->lowStockForHospitals(collect([$hospitalId]));
+        return $this->lowStockQuery(collect([$hospitalId]))
+            ->select('supply_stock_balances.*')
+            ->with('item')
+            ->get();
     }
 
-    private function lowStockForHospitals(Collection $hospitalIds): Collection
+    private function lowStockQuery(Collection $hospitalIds): Builder
     {
         return SupplyStockBalance::query()
             ->join('supply_reorder_rules', function ($join): void {
@@ -90,15 +97,14 @@ class SupplyAlertService
                     ->where('supply_reorder_rules.is_active', true);
             })
             ->whereIn('supply_stock_balances.hospital_id', $hospitalIds->all())
-            ->whereColumn('supply_stock_balances.quantity_on_hand', '<', 'supply_reorder_rules.minimum_quantity')
-            ->select('supply_stock_balances.*')
-            ->with('item')
-            ->get();
+            ->whereColumn('supply_stock_balances.quantity_on_hand', '<', 'supply_reorder_rules.minimum_quantity');
     }
 
     private function recipientsFor(int $hospitalId): Collection
     {
-        return User::all()->filter(fn (User $user): bool => $user->can('use supply') && $user->canAccessHospital($hospitalId));
+        return $this->recipients[$hospitalId] ??= User::all()
+            ->filter(fn (User $user): bool => $user->can('use supply') && $user->canAccessHospital($hospitalId))
+            ->values();
     }
 
     private function hospitalIdsFor(User $user, bool $includeAll): Collection
