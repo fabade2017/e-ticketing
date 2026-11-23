@@ -3,7 +3,8 @@ import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 export default function SideMenu() {
-    const { auth, branding, suite } = usePage().props;
+    const page = usePage();
+    const { auth, branding, suite } = page.props;
     const user = auth?.user;
     const roles = user?.roles || [];
     const perms = user?.permissions || [];
@@ -22,6 +23,26 @@ export default function SideMenu() {
     const [unread, setUnread] = useState(0);
     const currentHospital = suite?.current_hospital;
     const suiteUnread = suite?.unread_notifications || 0;
+    const currentPath = page.url || '/';
+    const currentModule = (suite?.modules || [])
+        .slice()
+        .sort((a, b) => b.route.length - a.route.length)
+        .find((module) => currentPath.startsWith(module.route))
+        ?.key ?? (currentPath.startsWith('/tickets') || currentPath.startsWith('/reports') || currentPath.startsWith('/kb') || currentPath.startsWith('/officers')
+        ? 'ticketing'
+        : currentPath.startsWith('/admin')
+            ? 'system'
+            : currentPath.startsWith('/dashboard')
+                ? suite?.modules?.[0]?.key || 'system'
+                : null);
+    const [expandedModule, setExpandedModule] = useState(currentModule || suite?.modules?.[0]?.key || 'system');
+    const toggleModule = (key) => setExpandedModule((current) => current === key ? null : key);
+
+    useEffect(() => {
+        if (currentModule) {
+            setExpandedModule(currentModule);
+        }
+    }, [currentModule]);
 
     useEffect(()=>{
         if (!user || !hasPerm('use chat')) return;
@@ -130,24 +151,36 @@ export default function SideMenu() {
                 )}
             </div>
             <nav className="flex-1 py-2 overflow-y-auto">
-                {groups.map((group) => (
-                    <div key={group.key} className="mb-2">
-                        {!collapsed && <div className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-widest opacity-50">{group.label}</div>}
-                        {group.items.map((item) => {
-                            const isChat = item.href === '/chat';
-                            return (
-                            <Link key={item.href+item.label} href={item.href} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 text-sm ${collapsed ? 'justify-center' : ''}`}>
-                                <span className="w-6 text-center relative">
-                                    {item.icon}
-                                    {isChat && unread > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">{unread>9?'9+':unread}</span>}
-                                </span>
-                                {!collapsed && <span className="flex-1">{item.label}</span>}
-                                {!collapsed && isChat && unread > 0 && <span className="bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{unread}</span>}
-                                {!collapsed && item.badge && <span className="text-[10px] bg-yellow-500 text-black px-1.5 py-0.5 rounded">{item.badge}</span>}
-                            </Link>
-                        );})}
-                    </div>
-                ))}
+                {groups.map((group) => {
+                    const isOpen = expandedModule === group.key;
+                    return (
+                        <div key={group.key} className="mb-1">
+                            <button
+                                type="button"
+                                onClick={() => toggleModule(group.key)}
+                                aria-expanded={isOpen}
+                                className={`w-full flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-widest opacity-70 hover:bg-white/10 ${collapsed ? 'justify-center px-0' : ''}`}
+                            >
+                                <span>{collapsed ? group.label.charAt(0) : group.label}</span>
+                                {!collapsed && <span className="text-xs opacity-70">{isOpen ? '−' : '+'}</span>}
+                            </button>
+                            {isOpen && group.items.map((item) => {
+                                const isChat = item.href === '/chat';
+                                return (
+                                    <Link key={item.href+item.label} href={item.href} className={`flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 text-sm ${collapsed ? 'justify-center' : ''}`}>
+                                        <span className="w-6 text-center relative">
+                                            {item.icon}
+                                            {isChat && unread > 0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">{unread>9?'9+':unread}</span>}
+                                        </span>
+                                        {!collapsed && <span className="flex-1">{item.label}</span>}
+                                        {!collapsed && isChat && unread > 0 && <span className="bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full">{unread}</span>}
+                                        {!collapsed && item.badge && <span className="text-[10px] bg-yellow-500 text-black px-1.5 py-0.5 rounded">{item.badge}</span>}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    );
+                })}
             </nav>
             {!collapsed && (
                 <div className="p-4 border-t border-white/10 text-xs opacity-60">

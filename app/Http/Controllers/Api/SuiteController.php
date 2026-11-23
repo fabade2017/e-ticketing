@@ -16,6 +16,13 @@ class SuiteController extends Controller
         ]);
     }
 
+    public function rooms(Request $request, SuiteNavigation $navigation): JsonResponse
+    {
+        return response()->json([
+            'rooms' => $navigation->roomsFor($request->user()),
+        ]);
+    }
+
     public function notifications(Request $request): JsonResponse
     {
         $notifications = $request->user()

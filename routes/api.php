@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::get('/user', [AuthController::class, 'me'])->name('api.user');
     Route::get('/suite/modules', [SuiteController::class, 'modules'])->name('api.suite.modules');
+    Route::get('/suite/rooms', [SuiteController::class, 'rooms'])->name('api.suite.rooms');
     Route::get('/suite/notifications', [SuiteController::class, 'notifications'])->name('api.suite.notifications');
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::post('/logout-all', [AuthController::class, 'logoutAll'])->name('api.logoutAll');

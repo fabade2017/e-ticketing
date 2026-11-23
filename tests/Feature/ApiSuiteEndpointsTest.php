@@ -25,6 +25,12 @@ class ApiSuiteEndpointsTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_suite_rooms_requires_authentication(): void
+    {
+        $this->getJson('/api/suite/rooms')
+            ->assertUnauthorized();
+    }
+
     public function test_soldier_only_gets_permitted_suite_modules(): void
     {
         $soldier = User::where('email', 'soldier@army.mil.ng')->first();
@@ -36,6 +42,19 @@ class ApiSuiteEndpointsTest extends TestCase
         $this->assertContains('ticketing', $keys);
         $this->assertNotContains('care', $keys);
         $this->assertNotContains('maintenance', $keys);
+    }
+
+    public function test_soldier_only_gets_permitted_suite_rooms_and_menus(): void
+    {
+        $soldier = User::where('email', 'soldier@army.mil.ng')->first();
+        Sanctum::actingAs($soldier);
+
+        $response = $this->getJson('/api/suite/rooms')->assertOk();
+        $rooms = collect($response->json('rooms'));
+
+        $this->assertSame(['ticketing'], $rooms->pluck('key')->all());
+        $this->assertContains('New Ticket', data_get($rooms->first(), 'menus.*.label'));
+        $this->assertNotContains('All Tickets', data_get($rooms->first(), 'menus.*.label'));
     }
 
     public function test_suite_notifications_are_scoped_to_authenticated_user(): void

@@ -1,24 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import client, { getQueue } from '../api/client';
+import client, { API_URL, getQueue } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import SyncButton from '../components/SyncButton';
 import SetPinModal from '../components/SetPinModal';
+
+const WEB_BASE_URL = API_URL.replace(/\/api\/?$/, '');
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
   const { user, logout, offline, pinSet, setPin, forgetOffline } = useAuth();
   const [stats, setStats] = useState(null);
   const [queueLen, setQueueLen] = useState(0);
-  const [modules, setModules] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [openRoom, setOpenRoom] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showSetPin, setShowSetPin] = useState(false);
   const [pinError, setPinError] = useState('');
 
   const load = async (silent = false) => {
     try { const { data } = await client.get('/tickets/stats', { __silent: silent }); setStats(data); } catch {}
-    try { const { data } = await client.get('/suite/modules', { __silent: silent }); setModules(data?.modules || []); } catch {}
+    try { const { data } = await client.get('/suite/rooms', { __silent: silent }); setRooms(data?.rooms || []); } catch {}
     try { const { data } = await client.get('/suite/notifications', { __silent: silent }); setNotifications(data?.notifications || []); } catch {}
     setQueueLen((await getQueue()).length);
   };
@@ -34,12 +37,25 @@ export default function DashboardScreen() {
     }
   };
 
-  const openModule = (module) => {
-    if (module.key === 'ticketing') {
+  const toggleRoom = (key) => {
+    setOpenRoom((current) => current === key ? null : key);
+  };
+
+  const openMenu = async (menu) => {
+    const route = menu.route || '/';
+    if (route === '/tickets/create') {
+      navigation.navigate('CreateTicket');
+      return;
+    }
+    if (route.startsWith('/tickets')) {
       navigation.navigate('Tickets');
       return;
     }
-    Alert.alert(module.label, 'Open this module from the web dashboard.');
+    try {
+      await Linking.openURL(`${WEB_BASE_URL}${route}`);
+    } catch {
+      Alert.alert('Unable to open', `${menu.label} could not be opened on this device.`);
+    }
   };
 
   return (
@@ -61,15 +77,30 @@ export default function DashboardScreen() {
       </View>
 
       <View style={s.info}>
-        <Text style={s.infoTitle}>Suite Modules</Text>
-        <View style={s.grid}>
-          {modules.map((module) => (
-            <TouchableOpacity key={module.key} style={[s.card, { backgroundColor: '#e0f2fe' }]} onPress={() => openModule(module)}>
-              <Text style={s.num}>{module.icon}</Text>
-              <Text style={s.lbl}>{module.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={s.infoTitle}>Suite Rooms</Text>
+        <Text style={s.infoTxt}>Tap a room to view its menus. Other rooms collapse automatically.</Text>
+        {rooms.length === 0 && <Text style={s.empty}>No suite rooms available for your access.</Text>}
+        {rooms.map((room) => {
+          const isOpen = openRoom === room.key;
+          return (
+            <View key={room.key} style={s.room}>
+              <TouchableOpacity style={s.roomHead} onPress={() => toggleRoom(room.key)} aria-expanded={isOpen}>
+                <Text style={s.roomIcon}>{room.icon}</Text>
+                <View style={s.roomCopy}>
+                  <Text style={s.roomName}>{room.label}</Text>
+                  <Text style={s.roomDesc}>{room.description}</Text>
+                </View>
+                <Text style={s.roomToggle}>{isOpen ? '−' : '+'}</Text>
+              </TouchableOpacity>
+              {isOpen && (room.menus || []).map((menu) => (
+                <TouchableOpacity key={menu.route + menu.label} style={s.menuItem} onPress={() => openMenu(menu)}>
+                  <Text style={s.menuIcon}>{menu.icon}</Text>
+                  <Text style={s.menuLabel}>{menu.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          );
+        })}
       </View>
 
       {notifications.length > 0 && (
@@ -124,6 +155,17 @@ const s = StyleSheet.create({
   info: { backgroundColor:'#f8fafc', borderRadius:14, padding:16, marginTop:16, borderWidth:1, borderColor:'#e2e8f0' },
   infoTitle: { fontWeight:'800', color:'#0b3d0b' },
   infoTxt: { fontSize:12, color:'#334155', marginTop:6, lineHeight:18 },
+  empty: { fontSize:12, color:'#64748b', marginTop:12, fontStyle:'italic' },
+  room: { borderWidth:1, borderColor:'#e2e8f0', borderRadius:12, backgroundColor:'#fff', marginTop:12, overflow:'hidden' },
+  roomHead: { flexDirection:'row', alignItems:'center', gap:12, padding:12 },
+  roomIcon: { fontSize:22 },
+  roomCopy: { flex:1 },
+  roomName: { fontSize:14, fontWeight:'800', color:'#0b3d0b' },
+  roomDesc: { fontSize:11, color:'#64748b', marginTop:2 },
+  roomToggle: { fontSize:18, color:'#0b3d0b', fontWeight:'800' },
+  menuItem: { flexDirection:'row', alignItems:'center', gap:10, paddingVertical:10, paddingHorizontal:16, borderTopWidth:1, borderTopColor:'#e2e8f0' },
+  menuIcon: { width:18, textAlign:'center', fontSize:13 },
+  menuLabel: { fontSize:12, color:'#334155', fontWeight:'600' },
   notification: { borderBottomWidth:1, borderBottomColor:'#e2e8f0', paddingVertical:8 },
   notificationModule: { fontSize:10, fontWeight:'800', color:'#0b3d0b', textTransform:'uppercase' },
   notificationTitle: { fontSize:12, color:'#334155', marginTop:2 },
