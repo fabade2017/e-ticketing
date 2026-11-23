@@ -284,6 +284,36 @@ class CareModuleTest extends TestCase
         $response->assertForbidden();
     }
 
+    public function test_patient_portal_provisions_a_linked_patient_on_first_visit(): void
+    {
+        $hospital = $this->hospital();
+        $portalUser = $this->userWithRoles($hospital, 'Patient');
+
+        $this->actingAs($portalUser)->get('/portal')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('patient.linked_user_id', $portalUser->id)
+                ->where('patient.hospital_id', $hospital->id)
+                ->where('patient.category', 'civilian')
+            );
+
+        $this->assertSame(1, CarePatient::where('linked_user_id', $portalUser->id)->count());
+
+        $this->actingAs($portalUser->fresh())->get('/portal')->assertOk();
+
+        $this->assertSame(1, CarePatient::where('linked_user_id', $portalUser->id)->count());
+    }
+
+    public function test_patient_portal_does_not_provision_for_an_explicit_missing_patient(): void
+    {
+        $hospital = $this->hospital();
+        $portalUser = $this->userWithRoles($hospital, 'Patient');
+
+        $this->actingAs($portalUser)->get('/portal?patient_id=999999')->assertNotFound();
+
+        $this->assertSame(0, CarePatient::where('linked_user_id', $portalUser->id)->count());
+    }
+
     public function test_user_without_care_workspace_permission_cannot_open_care_module(): void
     {
         $hospital = $this->hospital();

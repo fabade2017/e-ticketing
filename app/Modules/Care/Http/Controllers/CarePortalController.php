@@ -3,6 +3,8 @@
 namespace App\Modules\Care\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Hospital;
+use App\Models\User;
 use App\Modules\Care\Models\CareLabResult;
 use App\Modules\Care\Models\CarePatient;
 use App\Modules\Care\Services\CareAppointmentService;
@@ -12,6 +14,7 @@ use App\Services\PaymentGatewayManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -124,14 +127,37 @@ class CarePortalController extends Controller
 
         $patient = $patientId > 0
             ? CarePatient::findOrFail($patientId)
-            : $user->carePatient;
-
-        if ($patient === null) {
-            abort(404, 'No linked care patient was found.');
-        }
+            : ($user->carePatient ?? $this->createLinkedPatient($user));
 
         Gate::authorize('viewPatient', $patient);
 
         return $patient;
+    }
+
+    private function createLinkedPatient(User $user): CarePatient
+    {
+        $hospitalId = $user->current_hospital_id
+            ? Hospital::query()->whereKey($user->current_hospital_id)->where('is_active', true)->value('id')
+            : null;
+
+        $hospitalId ??= Hospital::query()->where('is_active', true)->value('id');
+
+        if ($hospitalId === null) {
+            abort(422, 'No active hospital is available for patient registration.');
+        }
+
+        $names = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
+
+        return CarePatient::create([
+            'network_number' => 'NET-'.Str::upper(Str::random(10)),
+            'army_number' => $user->service_number,
+            'category' => $user->hasRole('Soldier') ? 'military' : 'civilian',
+            'hospital_id' => $hospitalId,
+            'linked_user_id' => $user->id,
+            'first_name' => $names[0] ?? 'Patient',
+            'last_name' => $names[1] ?? ($user->service_number ?: 'Patient'),
+            'phone' => $user->phone,
+            'is_active' => true,
+        ]);
     }
 }
