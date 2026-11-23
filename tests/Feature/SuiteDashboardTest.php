@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Hospital;
 use App\Models\SuiteNotification;
 use App\Models\Ticket;
 use App\Models\User;
@@ -41,6 +42,38 @@ class SuiteDashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('maintenance'))
+                ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care'))
+                ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care-portal'))
+            );
+    }
+
+    public function test_dashboard_shares_care_workspace_module_for_care_staff(): void
+    {
+        $reception = User::factory()->create([
+            'current_hospital_id' => Hospital::first()->id,
+        ]);
+        $reception->assignRole('Reception');
+
+        $this->actingAs($reception->fresh())->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('suite.modules', fn ($modules) => collect($modules)->pluck('key')->contains('care'))
+                ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care-portal'))
+            );
+    }
+
+    public function test_dashboard_shares_patient_portal_module_for_portal_users(): void
+    {
+        $patient = User::factory()->create([
+            'current_hospital_id' => Hospital::first()->id,
+        ]);
+        $patient->assignRole('Patient');
+
+        $this->actingAs($patient->fresh())->get('/dashboard')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('suite.modules', fn ($modules) => collect($modules)->pluck('key')->contains('care-portal'))
+                ->where('suite.modules', fn ($modules) => ! collect($modules)->pluck('key')->contains('care'))
             );
     }
 
